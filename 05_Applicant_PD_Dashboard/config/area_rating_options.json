@@ -1,0 +1,22 @@
+{
+  "description": "Area rating field. Agreed 2026-10-15: shown as the dataset's 1 to 3 rating, assigned by the lender. Written by AI.",
+  "field": "REGION_RATING_CLIENT_W_CITY",
+  "required": true,
+  "form_label": "Area rating (assigned by lender)",
+  "options": [
+    {
+      "label": "1 - lower-risk area",
+      "value": 1
+    },
+    {
+      "label": "2 - average area",
+      "value": 2
+    },
+    {
+      "label": "3 - higher-risk area",
+      "value": 3
+    }
+  ],
+  "default": 2,
+  "note": "In practice a lender derives this from the postcode with an internal rating. The dataset's ratings are anonymised, so no postcode mapping is attempted."
+}

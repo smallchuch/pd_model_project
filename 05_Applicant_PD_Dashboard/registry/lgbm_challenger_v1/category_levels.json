@@ -1,0 +1,54 @@
+{
+  "OCCUPATION_TYPE": [
+    "Accountants",
+    "Cleaning staff",
+    "Cooking staff",
+    "Core staff",
+    "Drivers",
+    "HR staff",
+    "High skill tech staff",
+    "IT staff",
+    "Laborers",
+    "Low-skill Laborers",
+    "Managers",
+    "Medicine staff",
+    "Private service staff",
+    "Realty agents",
+    "Sales staff",
+    "Secretaries",
+    "Security staff",
+    "Waiters/barmen staff"
+  ],
+  "ORG_BAND": [
+    "6-8%",
+    "8-10%",
+    "<6%",
+    ">10%",
+    "Agriculture",
+    "Construction",
+    "Industry: type 1",
+    "Industry: type 3",
+    "Restaurant",
+    "Security",
+    "Self-employed",
+    "Trade: type 3",
+    "Transport: type 3"
+  ],
+  "NAME_INCOME_TYPE": [
+    "Businessman",
+    "Commercial associate",
+    "Maternity leave",
+    "Pensioner",
+    "State servant",
+    "Student",
+    "Unemployed",
+    "Working"
+  ],
+  "NAME_EDUCATION_TYPE": [
+    "Academic degree",
+    "Higher education",
+    "Incomplete higher",
+    "Lower secondary",
+    "Secondary / secondary special"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "description": "Plain-language education options for the form. Agreed 2026-10-15, option A (data-consistent). Written by AI.",
+  "field": "NAME_EDUCATION_TYPE",
+  "required": true,
+  "options": [
+    {
+      "label": "Postgraduate degree (Masters, PhD)",
+      "dataset_value": "Academic degree",
+      "bin": "Degree"
+    },
+    {
+      "label": "Bachelor degree",
+      "dataset_value": "Higher education",
+      "bin": "Degree"
+    },
+    {
+      "label": "Started a degree, didn't finish",
+      "dataset_value": "Incomplete higher",
+      "bin": "No degree"
+    },
+    {
+      "label": "Year 12",
+      "dataset_value": "Secondary / secondary special",
+      "bin": "No degree"
+    },
+    {
+      "label": "Trade or TAFE qualification",
+      "dataset_value": "Secondary / secondary special",
+      "bin": "No degree"
+    },
+    {
+      "label": "Left school before Year 12",
+      "dataset_value": "Lower secondary",
+      "bin": "No degree"
+    }
+  ],
+  "note": "TAFE kept with Secondary / secondary special: the training data does not separate vocational college from Year 12, and mapping TAFE to Higher education would add +0.547 WOE with no data behind it."
+}

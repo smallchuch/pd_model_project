@@ -1,0 +1,47 @@
+{
+  "description": "Employment field rules per income type, agreed 2026-10-07; out-of-policy block added 2026-10-15 (written by AI). Based on train_raw.parquet.",
+  "years_to_days": "DAYS_EMPLOYED = -1 * years * 365.25",
+  "income_types": {
+    "Working": {
+      "employment_years": "required"
+    },
+    "Commercial associate": {
+      "employment_years": "required"
+    },
+    "State servant": {
+      "employment_years": "required"
+    }
+  },
+  "out_of_policy": {
+    "message": "Applicant falls outside lending policy. Not scored by this model.",
+    "income_types": {
+      "Pensioner": "Policy decision 2026-10-15. Scoring them relies on Missing bins dominated by pensioners themselves.",
+      "Unemployed": "Policy decision 2026-10-15. 16 training rows (31% default), too few to score.",
+      "Businessman": "Policy decision 2026-10-15. Treated as too risky to lend to; 6 training rows (0 defaults) sit in the pensioner-dominated income bin.",
+      "Maternity leave": "Policy decision 2026-10-15. 3 training rows (0 defaults) sit in the pensioner-dominated income bin."
+    }
+  },
+  "not_offered": {
+    "Student": "15 training rows, all with employment years; outside this model's scope"
+  },
+  "training_counts": {
+    "Working": 126884,
+    "Commercial associate": 57404,
+    "Pensioner": 44224,
+    "State servant": 17453,
+    "Unemployed": 16,
+    "Student": 15,
+    "Businessman": 6,
+    "Maternity leave": 3
+  },
+  "age_checks": {
+    "min_working_age_hard": 14,
+    "min_working_age_warning": 16,
+    "rule": "employment_years <= age - 14 is a hard error; implied start age under 16 is a warning",
+    "training_age_range": [
+      20.5,
+      69.1
+    ],
+    "earliest_start_age_in_training": 17.9
+  }
+}

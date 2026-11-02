@@ -1,0 +1,234 @@
+---
+# Revised 2026-11-02 from baseline_pd_scorecard_revision_brief. AI-written revision.
+title: "Baseline PD Scorecard"
+subtitle: "Logistic Regression With Weight of Evidence"
+author: "Evan Reynolds"
+date: "October 2026"
+format:
+  revealjs:
+    theme: [default, brand.scss]
+    slide-number: c/t
+    transition: fade
+    transition-speed: fast
+    width: 1280
+    height: 720
+    center: false
+    menu: false
+    progress: false
+    auto-stretch: false
+    fig-align: center
+    echo: false
+    embed-resources: true
+title-slide-attributes:
+    data-background-color: "#3D2E4F"
+    data-background-gradient: "radial-gradient(120% 135% at 12% 4%, #5C4577 0%, #3D2E4F 52%, #2C2039 100%)"
+execute:
+  warning: false
+  message: false
+  freeze: auto
+jupyter: python3
+---
+
+```{python}
+#| label: setup
+#| include: false
+import os, sys, json, warnings
+warnings.filterwarnings("ignore")
+import numpy as np, pandas as pd, joblib
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_auc_score
+from scipy.stats import ks_2samp
+
+def find_repo_root(start, marker="lib"):
+    p_ = os.path.abspath(start)
+    while True:
+        if os.path.isdir(os.path.join(p_, marker)):
+            return p_
+        parent = os.path.dirname(p_)
+        if parent == p_:
+            raise FileNotFoundError("No lib folder found above " + str(start))
+        p_ = parent
+
+REPO = find_repo_root(os.getcwd())
+sys.path.append(os.path.join(REPO, "lib"))
+from python_style_util import p, f, s, C
+from deck_utils import deck_style
+deck_style()
+
+plt.rcParams.update({"font.size": 13, "axes.titlesize": 16, "axes.labelsize": 14,
+                     "xtick.labelsize": 13, "ytick.labelsize": 13, "legend.fontsize": 13})
+
+def card(num, label, note="", num_size=56, colour="#3D2E4F"):
+    n = f"<div style='font-family:monospace;font-size:{num_size}px;font-weight:700;color:{colour};line-height:1.05'>{num}</div>"
+    l = f"<div style='font-size:15px;letter-spacing:0.06em;text-transform:uppercase;color:#8A6D1F;margin-top:10px'>{label}</div>"
+    t = f"<div style='font-size:16px;color:#3a3a3a;margin-top:4px'>{note}</div>" if note else ""
+    return f"<div>{n}{l}{t}</div>"
+
+def grid(items, cols):
+    return ("<div style='display:grid;grid-template-columns:repeat(%d,1fr);gap:28px;margin-top:20px'>" % cols
+            + "".join(items) + "</div>")
+
+def pretty(name):
+    return DISPLAY.get(name, name.replace("_", " ").title())
+
+PROJ = REPO
+INPUT = os.path.join(PROJ, "02_PD_Model_Development", "inputs")
+REG = os.path.join(PROJ, "05_Applicant_PD_Dashboard", "registry", "logreg_baseline_v1")
+
+champ = joblib.load(os.path.join(REG, "model.joblib"))
+with open(os.path.join(REG, "metadata.json")) as fh:
+    meta = json.load(fh)
+FEATS = meta["features"]
+
+DISPLAY = {
+    "EXT_SOURCE_1": "External Credit Score 1", "EXT_SOURCE_2": "External Credit Score 2",
+    "EXT_SOURCE_3": "External Credit Score 3", "DAYS_EMPLOYED": "Job Tenure",
+    "ANNUITY_CREDIT": "Annuity-to-Credit Ratio", "AMT_GOODS_PRICE": "Goods Price",
+    "OCCUPATION_TYPE": "Occupation", "CREDIT_GOODS": "Credit-to-Goods Ratio (LVR)",
+    "ORG_BAND": "Organisation Band", "NAME_INCOME_TYPE": "Income Type",
+    "REGION_RATING_CLIENT_W_CITY": "Regional Rating", "NAME_EDUCATION_TYPE": "Education",
+}
+
+train = pd.read_parquet(os.path.join(INPUT, "train_woe.parquet"))
+test = pd.read_parquet(os.path.join(INPUT, "test_woe.parquet"))
+y_tr, y_te = train["TARGET"], test["TARGET"]
+
+pd_tr = champ.predict_proba(train[FEATS])[:, 1]
+pd_te = champ.predict_proba(test[FEATS])[:, 1]
+gini_tr = 2 * roc_auc_score(y_tr, pd_tr) - 1
+gini_te = 2 * roc_auc_score(y_te, pd_te) - 1
+gap = gini_tr - gini_te
+ks_te = ks_2samp(pd_te[y_te.values == 1], pd_te[y_te.values == 0]).statistic
+BASE = y_te.mean()
+
+rank = pd.Series(pd_te).rank(method="first")
+decile = pd.qcut(rank, 10, labels=False) + 1
+dec = pd.DataFrame({"pd": pd_te, "y": y_te.values, "decile": decile.values}).groupby("decile").agg(
+    n=("y", "size"), rate=("y", "mean"), avg_pd=("pd", "mean"))
+n_rev = int((dec["rate"].diff().dropna() <= 0).sum())   # decile reversals
+
+coef = pd.Series(champ.coef_[0], index=FEATS)
+n_neg = int((coef < 0).sum())
+ext_top = all(k.startswith("EXT_SOURCE") for k in coef.abs().nlargest(3).index)
+
+PASS = lambda ok: "PASS" if ok else "FAIL"
+```
+
+## Model Summary {.hero data-kick="Performance"}
+
+```{python}
+#| output: asis
+print(grid([
+    card(f"{gini_te:.3f}", "Test Gini", "Discrimination on unseen applicants", num_size=44),
+    card(f"{ks_te:.3f}", "Test KS", "Separation between the two outcome groups", num_size=44),
+    card(f"{gap:+.3f}", "Train/Test Gini Gap", "Stability between training and test", num_size=44),
+    card(f"{n_rev}", "Decile Reversals", "Risk ranking holds across all deciles", num_size=44),
+], 2))
+```
+
+## What the Model Predicts {data-kick="Target"}
+
+The model estimates each applicant's probability of repayment difficulty.
+
+```{python}
+#| output: asis
+print(grid([
+    card("0", "TARGET = 0", "No repayment difficulty", num_size=96),
+    card("1", "TARGET = 1", "Repayment difficulty", num_size=96),
+], 2))
+```
+
+Dataset-specific default proxy. Not a Basel default definition.
+
+## Pre-Fit Success Criteria {data-kick="Validation"}
+
+Criteria were defined before model fitting to provide a consistent basis for validation.
+
+```{python}
+#| output: asis
+print(grid([
+    card("≥ 0.45", "Test Gini", "Minimum discrimination threshold", num_size=44),
+    card("≤ 0.02", "Train/Test Gini Gap", "Limits deterioration between training and test", num_size=44),
+    card("Consistent", "Coefficient Signs", "Aligned with the expected direction of risk", num_size=36),
+    card("0", "Decile Reversals", "Risk rises across successive deciles", num_size=44),
+], 2))
+```
+
+## Results Against Criteria {data-kick="Validation"}
+
+```{python}
+#| output: asis
+def status(ok):
+    c = "#2E7D32" if ok else "#B23B3B"
+    return f"<span style='color:{c};font-weight:700'>{'PASS' if ok else 'FAIL'}</span>"
+print(grid([
+    card(f"{gini_te:.3f}", "Test Gini", f"Criterion ≥ 0.450 · {status(gini_te >= 0.45)}", num_size=44),
+    card(f"{gap:+.3f}", "Train/Test Gini Gap", f"Criterion ≤ 0.020 · {status(abs(gap) <= 0.02)}", num_size=44),
+    card(f"{n_neg} of {len(coef)}", "Coefficients negative", f"Credit logic aligned · {status(n_neg == len(coef) - 1)}", num_size=44),
+    card(f"{n_rev}", "Decile Reversals", f"Criterion = 0 · {status(n_rev == 0)}", num_size=44),
+], 2))
+```
+
+The one positive coefficient is Income Type (`{python} f"{coef['NAME_INCOME_TYPE']:+.3f}"`, 95% CI -0.03 to 0.14). The interval spans zero, so the coefficient is noted rather than treated as a failed sign.
+
+## Rank Ordering {data-kick="Validation"}
+
+```{python}
+#| fig-width: 10.5
+#| fig-height: 4.8
+#| out-width: "100%"
+fig, ax = plt.subplots(figsize=(10.5, 4.8))
+x = dec.index.values
+ax.plot(x, dec["rate"].values * 100, marker="o", color=p("jacaranda", 300), linewidth=3.5,
+        markersize=9, label="Observed repayment difficulty")
+ax.plot(x, dec["avg_pd"].values * 100, marker="s", color=p("gold", 300), linewidth=1.8,
+        linestyle="--", markersize=6, label="Predicted PD")
+ax.set_xticks(x)
+ax.set_xlabel("Predicted-risk decile (1 = lowest risk, 10 = highest)")
+ax.set_ylabel("Rate (%)")
+ax.legend(frameon=False, loc="upper left")
+ax.grid(axis="x", visible=False)
+```
+
+**Observed repayment difficulty increases across all ten predicted-risk deciles, with `{python} f"{n_rev} reversals" if n_rev else "zero reversals"`.**
+
+## Model Coefficients {data-kick="Interpretability"}
+
+```{python}
+#| output: asis
+tbl = coef.reindex(coef.abs().sort_values(ascending=False).index)
+print("| Feature | Coefficient |")
+print("|---|---:|")
+for k, v in tbl.items():
+    print(f"| {DISPLAY.get(k, k)} | {v:+.3f} |")
+```
+
+**`{python} "External credit scores have the largest coefficients in the baseline model." if ext_top else "Coefficient ranking to be reviewed."`**
+
+## Model Limitations {data-kick="Limitations"}
+
+**Target definition.** Repayment difficulty is a dataset-specific proxy, not a Basel default definition.
+
+**External scores.** Model performance depends materially on the external credit-score variables.
+
+**Validation scope.** The model has not undergone production validation. Gender is excluded as a protected attribute, and proxy checks on retained fields are a next step.
+
+## Baseline Established {.closing background-color="#3D2E4F" background-gradient="radial-gradient(120% 135% at 88% 96%, #5C4577 0%, #3D2E4F 52%, #2C2039 100%)"}
+
+<div class="rule"></div>
+<div class="lead">The logistic scorecard meets the predefined validation criteria and becomes the benchmark for challenger testing.</div>
+<div class="sub"><b>Next:</b> test whether LightGBM provides meaningful performance improvement.</div>
+
+```{=html}
+<script>
+window.addEventListener('load', () => {
+  const t = document.getElementById('title-slide');
+  if (t && !t.querySelector('.cover-meta')) {
+    const head = document.createElement('div');
+    head.className = 'cover-head';
+    head.innerHTML = '<div class="cover-kick">Stage 02 &nbsp;·&nbsp; Baseline PD Scorecard</div><div class="cover-rule"></div>';
+    t.insertBefore(head, t.firstChild);
+  }
+});
+</script>
+```

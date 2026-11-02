@@ -1,0 +1,32 @@
+{
+  "model_features": [
+    "EXT_SOURCE_3",
+    "EXT_SOURCE_2",
+    "EXT_SOURCE_1",
+    "DAYS_EMPLOYED",
+    "ANNUITY_CREDIT",
+    "EMPLOYED_AGE",
+    "AMT_GOODS_PRICE",
+    "DAYS_BIRTH",
+    "OCCUPATION_TYPE",
+    "CREDIT_GOODS",
+    "ORG_BAND",
+    "NAME_INCOME_TYPE",
+    "REGION_RATING_CLIENT_W_CITY",
+    "NAME_EDUCATION_TYPE"
+  ],
+  "train_test_split": {
+    "test_size": 0.2,
+    "random_state": 42,
+    "stratify": "TARGET"
+  },
+  "excluded_features": {
+    "CODE_GENDER": "Protected attribute - excluded on responsible-lending / anti-discrimination grounds. No formal proxy check has been run against the retained features (see Section 7)."
+  },
+  "known_gaps_for_future_tuning": [
+    "No train-vs-test IV/Gini stability check has been run to confirm no leakage beyond the IV < 0.5 threshold.",
+    "Bureau-enquiries missingness (~14% of rows, ~10.3% default vs ~8.1% base) was never tested for IV as a standalone flag - the family was parked on raw-count IV alone.",
+    "application_test (Kaggle unlabeled set) is unused; not usable for validation since it has no TARGET."
+  ],
+  "source_notebook": "default_rate_driver_scan_notebook.ipynb"
+}

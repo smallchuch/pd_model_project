@@ -1,0 +1,33 @@
+{
+  "description": "Loan inputs and the repayment calculation, agreed 2026-10-07.",
+  "product": "Cash loans only. Revolving loans are not offered.",
+  "inputs_required": [
+    "loan_amount",
+    "term_months",
+    "goods_price"
+  ],
+  "repayment": {
+    "frequency": "monthly",
+    "assumed_rate_pa": 0.14,
+    "formula": "repayment = L * (r/12) / (1 - (1 + r/12) ** -n)",
+    "rate_note": "Illustrative. The dataset has no interest rates; the model only sees repayment / loan amount."
+  },
+  "term_months": {
+    "min": 12,
+    "max": 60,
+    "step": 6
+  },
+  "derived": {
+    "ANNUITY_CREDIT": "repayment / loan_amount",
+    "CREDIT_GOODS": "loan_amount / goods_price",
+    "zero_or_blank_denominator": "NaN, scored as the Missing bin"
+  },
+  "training_range_check": {
+    "ANNUITY_CREDIT_train_min": 0.0221,
+    "ANNUITY_CREDIT_train_max": 0.1244,
+    "ratio_at_12m": 0.0898,
+    "ratio_at_60m": 0.0233,
+    "reason": "Rate chosen so every offered term stays inside the observed training range."
+  },
+  "amount_units": "Amounts are in dataset currency units (Home Credit), not AUD."
+}

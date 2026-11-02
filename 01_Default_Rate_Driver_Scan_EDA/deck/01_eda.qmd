@@ -1,0 +1,337 @@
+---
+# Revised 2026-11-02 from eda_slideshow_revision_brief. AI-written revision.
+title: "What Predicts Repayment Difficulty?"
+subtitle: "Home Credit application data · [Kaggle competition](https://www.kaggle.com/competitions/home-credit-default-risk)"
+author: "Evan Reynolds"
+format:
+  revealjs:
+    theme: [default, brand.scss]
+    slide-number: c/t
+    transition: fade
+    transition-speed: fast
+    width: 1280
+    height: 720
+    center: false
+    menu: false
+    progress: false
+    auto-stretch: false
+    fig-align: center
+    echo: false
+    embed-resources: true
+title-slide-attributes:
+    data-background-color: "#3D2E4F"
+    data-background-gradient: "radial-gradient(120% 135% at 12% 4%, #5C4577 0%, #3D2E4F 52%, #2C2039 100%)"
+execute:
+  warning: false
+  message: false
+  freeze: auto
+jupyter: python3
+---
+
+```{python}
+#| label: setup
+#| include: false
+import os, sys, warnings
+warnings.filterwarnings("ignore")
+import numpy as np, pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
+from matplotlib import colors as _mc
+
+def find_repo_root(start, marker="lib"):
+    p = os.path.abspath(start)
+    while True:
+        if os.path.isdir(os.path.join(p, marker)):
+            return p
+        parent = os.path.dirname(p)
+        if parent == p:
+            raise FileNotFoundError("No lib folder found above " + str(start))
+        p = parent
+
+REPO = find_repo_root(os.getcwd())
+sys.path.append(os.path.join(REPO, "lib"))
+
+from python_style_util import p, f, s, C
+from credit_utils.eda import default_rate_by_bin
+from deck_utils import (deck_style, BRAND_RAMP, add_baseline,
+                        strip_bar_labels, small_labels, reset_labels)
+deck_style()
+
+plt.rcParams.update({"font.size": 13, "axes.titlesize": 16, "axes.labelsize": 14,
+                     "xtick.labelsize": 13, "ytick.labelsize": 13, "legend.fontsize": 13})
+
+def card(num, label, note="", num_size=56, colour="#3D2E4F"):
+    n = f"<div style='font-family:monospace;font-size:{num_size}px;font-weight:700;color:{colour};line-height:1.05'>{num}</div>"
+    l = f"<div style='font-size:15px;letter-spacing:0.06em;text-transform:uppercase;color:#8A6D1F;margin-top:10px'>{label}</div>"
+    t = f"<div style='font-size:16px;color:#3a3a3a;margin-top:4px'>{note}</div>" if note else ""
+    return f"<div>{n}{l}{t}</div>"
+
+def grid(items, cols):
+    return ("<div style='display:grid;grid-template-columns:repeat(%d,1fr);gap:28px;margin-top:20px'>" % cols
+            + "".join(items) + "</div>")
+
+def pretty(name):
+    return DISPLAY.get(name, name.replace("_", " ").title())
+
+DATA = os.path.join(REPO, "Datasets", "Home Credit Default Risk", "application_train.csv")
+IV_FILE = os.path.join(REPO, "01_Default_Rate_Driver_Scan_EDA", "iv_screen.csv")
+IV_CUTOFF = 0.02   # project drop threshold (Siddiqi band). Confirm against notebook section 5.
+
+# Display names shared with the Stage 02 and Stage 04 decks
+DISPLAY = {
+    "EXT_SOURCE_1": "External Credit Score 1", "EXT_SOURCE_2": "External Credit Score 2",
+    "EXT_SOURCE_3": "External Credit Score 3", "DAYS_EMPLOYED": "Job Tenure",
+    "EMP_YEARS": "Job Tenure", "AGE_YEARS": "Age", "EMPLOYED_AGE": "Employed-to-Age Ratio",
+    "ANNUITY_CREDIT": "Annuity-to-Credit Ratio", "AMT_GOODS_PRICE": "Goods Price",
+    "AMT_CREDIT": "Loan Amount", "AMT_INCOME_TOTAL": "Income", "AMT_ANNUITY": "Annuity",
+    "CREDIT_GOODS": "Credit-to-Goods Ratio (LVR)", "DTI": "Debt-to-Income Ratio",
+    "OCCUPATION_TYPE": "Occupation", "ORG_BAND": "Organisation Band",
+    "NAME_INCOME_TYPE": "Income Type", "REGION_RATING_CLIENT_W_CITY": "Regional Rating",
+    "NAME_EDUCATION_TYPE": "Education",
+}
+
+usecols = ["TARGET", "EXT_SOURCE_1", "EXT_SOURCE_2", "EXT_SOURCE_3",
+           "DAYS_BIRTH", "DAYS_EMPLOYED", "NAME_EDUCATION_TYPE", "CNT_CHILDREN",
+           "AMT_INCOME_TOTAL", "AMT_CREDIT", "AMT_ANNUITY", "AMT_GOODS_PRICE", "CODE_GENDER"]
+raw = pd.read_csv(DATA, usecols=usecols)
+N_ALL = len(raw)                      # 307,511 applications
+BASE = raw["TARGET"].mean()           # 8.07% across all applications
+
+df = raw[raw["CODE_GENDER"] != "XNA"].copy()   # 4 rows with XNA gender dropped for charts
+df["DAYS_EMPLOYED"] = df["DAYS_EMPLOYED"].replace(365243, np.nan)
+df["AGE_YEARS"] = -df["DAYS_BIRTH"] / 365.25
+df["EMP_YEARS"] = -df["DAYS_EMPLOYED"] / 365.25
+
+def _sd(n, d): return n / d.replace(0, np.nan)
+df["DTI"]          = _sd(df["AMT_ANNUITY"], df["AMT_INCOME_TOTAL"])
+df["CREDIT_GOODS"] = _sd(df["AMT_CREDIT"],  df["AMT_GOODS_PRICE"])
+df["EMPLOYED_AGE"] = _sd(df["DAYS_EMPLOYED"], df["DAYS_BIRTH"])
+```
+
+## The Short Version {.hero data-kick="Executive summary"}
+
+::: {.hero-wrap}
+::: {.hero-col}
+<div class="hero-num">`{python} f"{BASE:.2%}"`<small>repayment difficulty across all applications</small></div>
+:::
+
+::: {.hero-col}
+Across **307,511 applications**, three groups of fields separate applicants by risk:
+
+- **External credit scores:** the strongest separation
+- **Age and job tenure:** younger applicants and shorter job tenure default more
+- **Affordability ratios:** repayment size relative to income and loan value
+
+Raw loan amount shows no clear pattern on its own.
+:::
+:::
+
+Driver performance is compared with the `{python} f"{BASE:.2%}"` portfolio default rate.
+
+## Dataset Overview {data-kick="The data"}
+
+```{python}
+#| fig-width: 10
+#| fig-height: 3.0
+#| out-width: "90%"
+counts = raw["TARGET"].value_counts(normalize=True).sort_index()
+labels = ["TARGET = 0: Repaid", "TARGET = 1: Repayment difficulty"]
+fig, ax = plt.subplots(figsize=(11, 3.4))
+bars = ax.barh(labels, counts.values, color=[p("jacaranda", 300), p("gold", 300)],
+               alpha=0.95, edgecolor="white", linewidth=1.2, height=0.62)
+for b, v in zip(bars, counts.values):
+    ax.text(v + 0.012, b.get_y() + b.get_height()/2, f"{v:.2%}", va="center",
+            fontweight="bold", fontfamily=f("mono"), fontsize=12, color=C.text)
+ax.set_xlim(0, 1); ax.set_xlabel("Share of applications")
+ax.set_title(f"{N_ALL:,} applications, 122 fields, {BASE:.2%} repayment difficulty", loc="left")
+ax.grid(axis="x"); ax.grid(axis="y", visible=False)
+ax.invert_yaxis()
+plt.show()
+```
+
+**Class imbalance:** repayment difficulty affects 8.07% of applications, about 11 repaid applications for every one with difficulty. Each group is therefore read against the 8.07% line.
+
+## How to Read the Charts {data-kick="Method"}
+
+Applicants are sorted into bins from low to high value for each field. Each bin's repayment-difficulty rate is compared with the **8.07% portfolio rate**.
+
+```{python}
+#| fig-width: 10
+#| fig-height: 3.8
+#| out-width: "85%"
+ex = df.assign(kids=df["CNT_CHILDREN"].clip(upper=3)).groupby("kids")["TARGET"].agg(["mean", "size"])
+ex.index = ["0 children", "1 child", "2 children", "3 or more"]
+norm = _mc.Normalize(ex["mean"].min(), ex["mean"].max())
+rgba = BRAND_RAMP(norm(ex["mean"].values)); rgba[:, 3] = 0.95
+fig, ax = plt.subplots(figsize=(11, 4.0))
+bars = ax.bar(ex.index, ex["mean"], color=rgba, edgecolor="white", linewidth=1.0, width=0.55)
+ax.axhline(BASE, ls="--", color=C.text_muted, lw=1.2)
+ax.text(3.45, BASE, f" portfolio {BASE:.2%}", va="bottom", ha="right", fontsize=11,
+        color=C.text_muted, fontfamily=f("mono"))
+ax.bar_label(bars, labels=[f"{v:.1%}" for v in ex["mean"]], padding=4, fontweight="bold",
+             fontfamily=f("mono"), fontsize=12, color=C.text)
+ax.yaxis.set_major_formatter(mticker.PercentFormatter(xmax=1))
+ax.set_ylim(0, ex["mean"].max() * 1.18)
+ax.set_title("Example: number of children (illustration)", loc="left")
+ax.grid(axis="x", visible=False)
+plt.show()
+```
+
+Lighter bars have lower repayment-difficulty rates and darker bars have higher rates. Colour scale: **Lower Repayment Difficulty → Higher Repayment Difficulty.**
+
+- **Clear separation:** default rates vary across groups.
+- **Little separation:** default rates stay close to the portfolio average.
+
+## External Credit Scores {data-kick="Signal"}
+
+```{python}
+#| fig-width: 10
+#| fig-height: 4.6
+#| out-width: "100%"
+fig, axes = default_rate_by_bin(
+    df, ["EXT_SOURCE_2", "EXT_SOURCE_3", "EXT_SOURCE_1"],
+    target="TARGET", ncols=3, bins=10, bin_label="rank",
+    grade_scale=BRAND_RAMP, na_as_bin=True, panel_w=3.3, panel_h=4.2,
+    show_base_rate=False,
+)
+add_baseline(axes, BASE)
+plt.show()
+```
+
+**External credit scores show the strongest separation in default rates among the screened variables.**
+
+## Age and Job Tenure {data-kick="Signal"}
+
+```{python}
+#| fig-width: 10
+#| fig-height: 4.6
+#| out-width: "100%"
+fig, axes = default_rate_by_bin(
+    df, ["AGE_YEARS", "EMP_YEARS"], target="TARGET",
+    ncols=2, bins=8, method="quantile", bin_label="range",
+    grade_scale=BRAND_RAMP, na_as_bin=True, panel_w=6.4, panel_h=4.8,
+    show_base_rate=False,
+)
+add_baseline(axes, BASE)
+plt.show()
+```
+
+**Default rates are higher among younger applicants and those with shorter job tenure.** The missing job-tenure bin is pensioners, whose rate is low.
+
+## Education {data-kick="Signal"}
+
+```{python}
+#| fig-width: 10
+#| fig-height: 4.4
+#| out-width: "100%"
+order = df.groupby("NAME_EDUCATION_TYPE")["TARGET"].mean().sort_values()
+norm = _mc.Normalize(order.min(), order.max())
+rgba = BRAND_RAMP(norm(order.values)); rgba[:, 3] = 0.95
+fig, ax = plt.subplots(figsize=(11, 4.4))
+bars = ax.barh(order.index.astype(str), order.values, color=rgba,
+               edgecolor="white", linewidth=1.0)
+ax.axvline(BASE, ls="--", color=C.text_muted, lw=1, zorder=1.4)
+ax.text(BASE, len(order) - 0.35, f" portfolio {BASE:.2%}", va="bottom", ha="left",
+        fontsize=11, color=C.text_muted, fontfamily=f("mono"), zorder=5,
+        bbox=dict(facecolor="white", edgecolor="none", boxstyle="round,pad=0.18", alpha=0.85))
+for b, v in zip(bars, order.values):
+    ax.text(v + 0.002, b.get_y() + b.get_height()/2, f"{v:.1%}", va="center",
+            fontweight="bold", fontsize=12, fontfamily=f("mono"), color=C.text)
+ax.set_xlim(0, order.values.max() * 1.16)
+ax.xaxis.set_major_formatter(mticker.PercentFormatter(xmax=1))
+ax.set_title("Default rate by education level", loc="left")
+ax.grid(axis="x"); ax.grid(axis="y", visible=False)
+plt.show()
+```
+
+```{python}
+#| output: asis
+print(f"Default rates rise as education level falls, from **{order.iloc[0]:.1%}** for "
+      f"{order.index[0].lower()} to **{order.iloc[-1]:.1%}** for {order.index[-1].lower()}.")
+```
+
+## Loan Amount {data-kick="Signal"}
+
+```{python}
+#| fig-width: 10
+#| fig-height: 4.6
+#| out-width: "100%"
+small_labels(9)
+fig, axes = default_rate_by_bin(
+    df, ["AMT_CREDIT", "AMT_INCOME_TOTAL", "AMT_ANNUITY"],
+    target="TARGET", ncols=3, bins=10, bin_label="rank",
+    grade_scale=BRAND_RAMP, panel_w=3.3, panel_h=4.2, show_base_rate=False,
+)
+reset_labels()
+add_baseline(axes, BASE)
+plt.show()
+```
+
+**Default rate does not show a clear monotonic relationship with loan amount.**
+
+## Affordability Ratios {data-kick="Signal"}
+
+<div style="font-size:18px">LVR = loan ÷ goods price · Employed-to-Age = job tenure ÷ age · Debt-to-Income = annuity ÷ income</div>
+
+```{python}
+#| fig-width: 10
+#| fig-height: 4.6
+#| out-width: "100%"
+fig, axes = default_rate_by_bin(
+    df, ["EMPLOYED_AGE", "CREDIT_GOODS", "DTI"], target="TARGET",
+    ncols=3, bins=12, bin_label="rank", grade_scale=BRAND_RAMP, na_as_bin=True,
+    panel_w=3.3, panel_h=4.2, show_base_rate=False,
+)
+strip_bar_labels(axes)   # 12 near-equal bins: labels collide, so the y-axis carries values
+for ax in np.ravel(np.asarray(axes)):
+    ax.margins(y=0.06)
+add_baseline(axes, BASE)
+plt.show()
+```
+
+**The Employed-to-Age and Credit-to-Goods (LVR) ratios show separation across groups. Debt-to-income does not show a clear pattern.**
+
+## WOE and Information Value {data-kick="Feature selection"}
+
+```{python}
+#| output: asis
+if os.path.exists(IV_FILE):
+    iv_tbl = pd.read_csv(IV_FILE).sort_values("iv", ascending=False).reset_index(drop=True)
+    n_total = len(iv_tbl)
+    print("| Feature | Information Value | Decision |")
+    print("|---|---:|---|")
+    for _, r in iv_tbl.head(12).iterrows():
+        d = "Retained" if r["iv"] >= IV_CUTOFF else "Not retained"
+        print(f"| {pretty(r['feature'])} | {r['iv']:.3f} | {d} |")
+    print(f"\nTop 12 of {n_total} screened features. **IV cutoff: {IV_CUTOFF:.2f}.** Features above the cutoff move forward to logistic model development.")
+else:
+    print("::: {.caveat}\nIV table pending. Export `iv_screen.csv` (columns `feature`, `iv`) from notebook section 5.3 into this project folder, then re-render.\n:::")
+```
+
+## From Scan to Scorecard {.closing background-color="#3D2E4F" background-gradient="radial-gradient(120% 135% at 88% 96%, #5C4577 0%, #3D2E4F 52%, #2C2039 100%)"}
+
+<div class="rule"></div>
+<div class="lead">From scan to scorecard.</div>
+<div class="sub">Selected features now move into logistic PD model development.</div>
+
+```{=html}
+<script>
+window.addEventListener('load', () => {
+  const t = document.getElementById('title-slide');
+  if (t && !t.querySelector('.cover-meta')) {
+    const head = document.createElement('div');
+    head.className = 'cover-head';
+    head.innerHTML = '<div class="cover-kick">Stage 01 &nbsp;·&nbsp; Default Rate Driver Scan</div><div class="cover-rule"></div>';
+    t.insertBefore(head, t.firstChild);
+    const d = document.createElement('div');
+    d.className = 'cover-meta';
+    d.innerHTML = `
+      <div class="cm"><span class="cm-n">307,511</span><span class="cm-l">Applications</span></div>
+      <div class="cm"><span class="cm-n">122</span><span class="cm-l">Raw fields</span></div>
+      <div class="cm"><span class="cm-n">8.07%</span><span class="cm-l">Base default rate</span></div>
+      <div class="cm"><span class="cm-n">11</span><span class="cm-l">Drivers screened</span></div>`;
+    t.appendChild(d);
+  }
+});
+</script>
+```

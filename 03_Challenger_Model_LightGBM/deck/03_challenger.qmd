@@ -1,0 +1,303 @@
+---
+# Revised 2026-11-02 to mirror the Stage 02 revision. Draft, AI-written. Confirm against the design brief.
+title: "LightGBM Challenger"
+subtitle: "Does a flexible model find signal the scorecard misses?"
+author: "Evan Reynolds"
+date: "November 2026"
+format:
+  revealjs:
+    theme: [default, brand.scss]
+    slide-number: c/t
+    transition: fade
+    transition-speed: fast
+    width: 1280
+    height: 720
+    center: false
+    menu: false
+    progress: false
+    auto-stretch: false
+    fig-align: center
+    echo: false
+    embed-resources: true
+title-slide-attributes:
+    data-background-color: "#3D2E4F"
+    data-background-gradient: "radial-gradient(120% 135% at 12% 4%, #5C4577 0%, #3D2E4F 52%, #2C2039 100%)"
+execute:
+  warning: false
+  message: false
+  freeze: auto
+jupyter: python3
+---
+
+```{python}
+#| label: setup
+#| include: false
+import os, sys, json, warnings
+warnings.filterwarnings("ignore")
+import numpy as np, pandas as pd, joblib
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_auc_score
+from scipy.stats import ks_2samp
+
+def find_repo_root(start, marker="lib"):
+    p_ = os.path.abspath(start)
+    while True:
+        if os.path.isdir(os.path.join(p_, marker)):
+            return p_
+        parent = os.path.dirname(p_)
+        if parent == p_:
+            raise FileNotFoundError("No lib folder found above " + str(start))
+        p_ = parent
+
+REPO = find_repo_root(os.getcwd())
+sys.path.append(os.path.join(REPO, "lib"))
+from python_style_util import p, f, s, C
+from deck_utils import deck_style
+deck_style()
+
+plt.rcParams.update({"font.size": 13, "axes.titlesize": 16, "axes.labelsize": 14,
+                     "xtick.labelsize": 13, "ytick.labelsize": 13, "legend.fontsize": 13})
+
+def card(num, label, note="", num_size=56, colour="#3D2E4F"):
+    n = f"<div style='font-family:monospace;font-size:{num_size}px;font-weight:700;color:{colour};line-height:1.05'>{num}</div>"
+    l = f"<div style='font-size:15px;letter-spacing:0.06em;text-transform:uppercase;color:#8A6D1F;margin-top:10px'>{label}</div>"
+    t = f"<div style='font-size:16px;color:#3a3a3a;margin-top:4px'>{note}</div>" if note else ""
+    return f"<div>{n}{l}{t}</div>"
+
+def grid(items, cols):
+    return ("<div style='display:grid;grid-template-columns:repeat(%d,1fr);gap:28px;margin-top:20px'>" % cols
+            + "".join(items) + "</div>")
+
+def pretty(name):
+    return DISPLAY.get(name, name.replace("_", " ").title())
+
+PROJ = REPO
+INPUT = os.path.join(PROJ, "02_PD_Model_Development", "inputs")
+REG_CH = os.path.join(PROJ, "05_Applicant_PD_Dashboard", "registry", "lgbm_challenger_v1")
+REG_CP = os.path.join(PROJ, "05_Applicant_PD_Dashboard", "registry", "logreg_baseline_v1")
+
+DISPLAY = {
+    "EXT_SOURCE_1": "External Credit Score 1", "EXT_SOURCE_2": "External Credit Score 2",
+    "EXT_SOURCE_3": "External Credit Score 3", "DAYS_EMPLOYED": "Job Tenure",
+    "ANNUITY_CREDIT": "Annuity-to-Credit Ratio", "AMT_GOODS_PRICE": "Goods Price",
+    "OCCUPATION_TYPE": "Occupation", "CREDIT_GOODS": "Credit-to-Goods Ratio (LVR)",
+    "ORG_BAND": "Organisation Band", "NAME_INCOME_TYPE": "Income Type",
+    "REGION_RATING_CLIENT_W_CITY": "Regional Rating", "NAME_EDUCATION_TYPE": "Education",
+}
+
+# Challenger (refit) and champion (scorecard), scored on the same test rows
+lgbm = joblib.load(os.path.join(REG_CH, "model.joblib"))
+with open(os.path.join(REG_CH, "metadata.json")) as fh:
+    ch_meta = json.load(fh)
+with open(os.path.join(REG_CH, "category_levels.json")) as fh:
+    cat_levels = json.load(fh)
+champ = joblib.load(os.path.join(REG_CP, "model.joblib"))
+with open(os.path.join(REG_CP, "metadata.json")) as fh:
+    cp_meta = json.load(fh)
+FEATS = ch_meta["features"]
+CAT = ch_meta["categorical"]
+
+test_raw = pd.read_parquet(os.path.join(INPUT, "test_raw.parquet"))
+test_woe = pd.read_parquet(os.path.join(INPUT, "test_woe.parquet"))
+y_te = test_raw["TARGET"]
+
+X_te = test_raw[FEATS].copy()
+for col in CAT:
+    X_te[col] = pd.Categorical(X_te[col], categories=cat_levels[col])
+
+pd_ch = lgbm.predict_proba(X_te)[:, 1]
+pd_cp = champ.predict_proba(test_woe[cp_meta["features"]])[:, 1]
+
+gini_ch = 2 * roc_auc_score(y_te, pd_ch) - 1
+gini_cp = 2 * roc_auc_score(y_te, pd_cp) - 1
+uplift = gini_ch - gini_cp
+ks_ch = ks_2samp(pd_ch[y_te.values == 1], pd_ch[y_te.values == 0]).statistic
+ks_cp = ks_2samp(pd_cp[y_te.values == 1], pd_cp[y_te.values == 0]).statistic
+BASE = y_te.mean()
+mean_pd_gap = abs(pd_ch.mean() - BASE)            # 1.1d: mean predicted vs actual
+
+# Rank ordering on test deciles (rank method='first', as in 1.1c)
+rank = pd.Series(pd_ch).rank(method="first")
+decile = pd.qcut(rank, 10, labels=False) + 1
+dec = pd.DataFrame({"pd": pd_ch, "y": y_te.values, "decile": decile.values}).groupby("decile").agg(
+    n=("y", "size"), rate=("y", "mean"), avg_pd=("pd", "mean"))
+n_rev = int((dec["rate"].diff().dropna() <= 0).sum())
+max_dec_gap = (dec["rate"] - dec["avg_pd"]).abs().max()
+
+# Gain importance, share of total (from the saved refit)
+imp = pd.Series(lgbm.booster_.feature_importance(importance_type="gain"), index=FEATS)
+imp = (imp / imp.sum()).sort_values(ascending=False)
+ext_top3 = all(k.startswith("EXT_SOURCE") for k in imp.index[:3])
+
+# Gap figures. The refit gap is read from the registry. The first-fit gap is NOT in
+# any saved file, so it stays a typed value until notebook 03 section 4.2b is confirmed.
+GAP_REFIT = ch_meta["gap"]
+GAP_FIRST = 0.065
+GINI_CHECK = abs(gini_ch - ch_meta["gini_test"]) < 0.001   # live score matches registry
+
+def verdict(u):
+    if u < 0.008:
+        return "Retain (within noise)"
+    if u <= 0.03:
+        return "Retain and review interactions"
+    return "Rebuild the scorecard"
+
+PASS = lambda ok: "PASS" if ok else "FAIL"
+VERDICT = verdict(uplift)
+```
+
+## The Short Version {.hero data-kick="Executive summary"}
+
+```{python}
+#| output: asis
+print(grid([
+    card(f"{uplift:+.3f}", "Gini uplift over the scorecard", num_size=56),
+    card(VERDICT, "Verdict under 1.1a", num_size=30),
+], 2))
+```
+
+A gradient-boosted tree model on the **same 12 fields and the same applicants** finds a modest gain over the scorecard:
+
+- **Test Gini** `{python} f"{gini_ch:.3f}"` against the scorecard's `{python} f"{gini_cp:.3f}"`
+- **Train/Test Gini Gap** `{python} f"{GAP_REFIT:.3f}"` after one regularised refit, inside the 0.06 limit
+- **Decile Reversals** `{python} f"{n_rev}"`
+
+**The scorecard stays champion.** The challenger finds a little more signal, but not enough to justify losing field-by-field explainability.
+
+## The Question {data-kick="The question"}
+
+The scorecard looks at each field's bins and how they add up. A tree model can find **interactions**, where two fields matter more together than apart.
+
+The test is fair. Both models score the same test applicants with the same 12 fields, so any difference comes from the model, not the data.
+
+## Success Criteria, Set Before Fitting {data-kick="The bar"}
+
+| Criterion | Rule |
+|---|---|
+| 1.1a Gini uplift | Under 0.008: retain (noise). 0.008 to 0.03: retain and review interactions. Over 0.03: rebuild the scorecard. |
+| 1.1b Train/Test Gini Gap | At most 0.06 |
+| 1.1c Decile Reversals | Strictly rising across test deciles, zero reversals |
+| 1.1d Calibration | Mean predicted risk within 0.44 pp of the actual rate |
+
+## Did the First Model Overfit? {data-kick="The gap"}
+
+The first LightGBM fit memorised its training rows. Its Train/Test Gini Gap was **`{python} f"{GAP_FIRST:.3f}"`**, above the 0.06 limit, so its uplift could not be used.
+
+One refit with shallower trees and bigger leaves brought the gap to **`{python} f"{GAP_REFIT:.3f}"`** with no material loss of test Gini. Only the refit is carried forward.
+
+```{python}
+#| fig-width: 10
+#| fig-height: 3.6
+#| out-width: "90%"
+labels = ["First fit", "Refit"]
+gaps = [GAP_FIRST, GAP_REFIT]
+colours = [p("gold", 300) if g > 0.06 else p("olive", 300) for g in gaps]
+fig, ax = plt.subplots(figsize=(11, 3.4))
+bars = ax.bar(labels, gaps, color=colours, width=0.45)
+for b, v in zip(bars, gaps):
+    ax.text(b.get_x() + b.get_width()/2, v + 0.002, f"{v:.3f}", ha="center",
+            fontweight="bold", fontfamily=f("mono"), fontsize=12)
+ax.axhline(0.06, color="grey", linestyle="--", linewidth=1)
+ax.text(1.3, 0.063, "1.1b limit 0.06", color="grey", fontsize=10, ha="right")
+ax.set_ylim(0, 0.08)
+ax.set_ylabel("Train minus test Gini")
+ax.grid(axis="x", visible=False)
+```
+
+## Test Results: Challenger Against Scorecard {data-kick="Results"}
+
+```{python}
+#| fig-width: 10
+#| fig-height: 3.8
+#| out-width: "90%"
+labels = ["Scorecard", "LightGBM refit"]
+gini_vals = [gini_cp, gini_ch]
+ks_vals = [ks_cp, ks_ch]
+x = np.arange(2)
+fig, ax = plt.subplots(figsize=(11, 4))
+w = 0.34
+b1 = ax.bar(x - w/2, gini_vals, w, color=p("jacaranda", 300), label="Test Gini")
+b2 = ax.bar(x + w/2, ks_vals, w, color=p("gold", 300), label="Test KS")
+for bars in (b1, b2):
+    for b in bars:
+        ax.text(b.get_x() + b.get_width()/2, b.get_height() + 0.01, f"{b.get_height():.3f}",
+                ha="center", fontsize=10, fontfamily=f("mono"))
+ax.set_xticks(x, labels)
+ax.set_ylim(0, 0.65)
+ax.legend(frameon=False, loc="upper left")
+ax.grid(axis="x", visible=False)
+```
+
+The refit's Test Gini is `{python} f"{gini_ch:.3f}"`, an uplift of `{python} f"{uplift:+.3f}"`. That is **`{python} f"{abs(uplift - 0.03):.4f}"` below the 0.03 rebuild line**. The Test Gini standard error is about 0.008, so the honest reading is "retain, and treat as borderline."
+
+## Rank Ordering and Calibration {data-kick="Checks"}
+
+```{python}
+#| fig-width: 10.5
+#| fig-height: 4.8
+#| out-width: "100%"
+fig, ax = plt.subplots(figsize=(10.5, 4.8))
+x = dec.index.values
+ax.plot(x, dec["rate"].values * 100, marker="o", color=p("jacaranda", 300), linewidth=3.5,
+        markersize=9, label="Observed repayment difficulty")
+ax.plot(x, dec["avg_pd"].values * 100, marker="s", color=p("gold", 300), linewidth=1.8,
+        linestyle="--", markersize=6, label="Predicted PD")
+ax.set_xticks(x)
+ax.set_xlabel("Predicted-risk decile (1 = lowest risk, 10 = highest)")
+ax.set_ylabel("Rate (%)")
+ax.legend(frameon=False, loc="upper left")
+ax.grid(axis="x", visible=False)
+```
+
+**Decile Reversals: `{python} f"{n_rev}"` (criterion 1.1c). Mean predicted PD is `{python} f"{mean_pd_gap*100:.2f}"` pp from the actual rate (criterion 1.1d).** Individual deciles differ by up to `{python} f"{max_dec_gap*100:.1f}"` pp, which is a calibration detail, not a ranking failure.
+
+## What the Model Relies On {data-kick="Drivers"}
+
+Gain importance shows how much each field improves the trees. It is the tree equivalent of the scorecard's coefficients, but it does not show direction.
+
+```{python}
+#| output: asis
+print("| Feature | Share of gain |")
+print("|---|---:|")
+for k, v in imp.head(6).items():
+    print(f"| {DISPLAY.get(k, k)} | {v:.1%} |")
+print(f"| All other fields | {1 - imp.head(6).sum():.1%} |")
+```
+
+**`{python} "The external credit scores dominate, which matches the scorecard." if ext_top3 else "The top drivers differ from the scorecard and need review."`**
+
+## Limitations {data-kick="Limitations"}
+
+**Explainability.** A tree ensemble cannot be read field by field the way the scorecard can. Explaining an individual decision needs an extra tool, such as SHAP, which has not been run.
+
+**Single model and seed.** One refit with one random seed. Seed sensitivity is not tested.
+
+**Target definition.** Same payment-difficulty outcome as the scorecard. Not a regulatory default.
+
+**Tuning.** No hyperparameter search. The refit was chosen by the train/test gap rule, and the test Gini was seen before the refit, so the result is not a fully blind test.
+
+## Recommendation {data-kick="The call"}
+
+::: {.takeaway}
+**Keep the scorecard as champion.** The uplift is `{python} f"{uplift:+.3f}"`, in the "retain and review" band. The next step is to examine the tree's strongest interactions as candidate terms for a v2 scorecard, which keeps the explainability.
+:::
+
+```{python}
+#| output: asis
+if not GINI_CHECK:
+    print("\n**QA flag:** live challenger Gini does not match the registry. Check before publishing.")
+```
+
+```{=html}
+<script>
+window.addEventListener('load', () => {
+  const t = document.getElementById('title-slide');
+  if (t && !t.querySelector('.cover-meta')) {
+    const head = document.createElement('div');
+    head.className = 'cover-head';
+    head.innerHTML = '<div class="cover-kick">Stage 03 &nbsp;·&nbsp; LightGBM Challenger</div><div class="cover-rule"></div>';
+    t.insertBefore(head, t.firstChild);
+  }
+});
+</script>
+```

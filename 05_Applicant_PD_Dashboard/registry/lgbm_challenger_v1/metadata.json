@@ -1,0 +1,40 @@
+{
+  "name": "LightGBM challenger",
+  "version": "v1",
+  "role": "challenger",
+  "adapter": "lgbm_adapter",
+  "calibration": "Not calibrated",
+  "features": [
+    "EXT_SOURCE_3",
+    "EXT_SOURCE_2",
+    "EXT_SOURCE_1",
+    "DAYS_EMPLOYED",
+    "ANNUITY_CREDIT",
+    "AMT_GOODS_PRICE",
+    "OCCUPATION_TYPE",
+    "CREDIT_GOODS",
+    "ORG_BAND",
+    "NAME_INCOME_TYPE",
+    "REGION_RATING_CLIENT_W_CITY",
+    "NAME_EDUCATION_TYPE"
+  ],
+  "categorical": [
+    "OCCUPATION_TYPE",
+    "ORG_BAND",
+    "NAME_INCOME_TYPE",
+    "NAME_EDUCATION_TYPE"
+  ],
+  "best_iteration": 143,
+  "hyperparameters": {
+    "learning_rate": 0.1,
+    "num_leaves": 20,
+    "min_child_samples": 300
+  },
+  "gini_test": 0.5219567875245221,
+  "gini_train": 0.5760054821973764,
+  "gap": 0.054048694672854225,
+  "ks_test": 0.38860845986642867,
+  "uplift_vs_champion": 0.029399877355756887,
+  "sklearn_version": "1.8.0",
+  "lightgbm_version": "4.6.0"
+}

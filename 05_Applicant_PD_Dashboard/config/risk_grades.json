@@ -1,0 +1,17 @@
+{
+  "description": "Risk grade master scale, agreed 2026-10-16 (option B: fixed PD bands, Grade 1 = lowest risk). Written by AI. The same scale applies to every model, so champion and challenger grades are comparable.",
+  "lower_bound_inclusive": true,
+  "grades": [
+    {"grade": 1, "label": "Very low risk", "pd_min": 0.00, "pd_max": 0.03, "style": "safe"},
+    {"grade": 2, "label": "Low risk",      "pd_min": 0.03, "pd_max": 0.06, "style": "safe"},
+    {"grade": 3, "label": "Moderate risk", "pd_min": 0.06, "pd_max": 0.10, "style": "watch"},
+    {"grade": 4, "label": "Elevated risk", "pd_min": 0.10, "pd_max": 0.18, "style": "bad"},
+    {"grade": 5, "label": "High risk",     "pd_min": 0.18, "pd_max": 1.00, "style": "bad"}
+  ],
+  "test_set_check": {
+    "source": "50,349 in-policy test applicants, logreg_baseline_v1",
+    "share":       [0.210, 0.272, 0.218, 0.189, 0.111],
+    "avg_pd":      [0.020, 0.044, 0.078, 0.133, 0.262],
+    "actual_rate": [0.019, 0.039, 0.081, 0.129, 0.268]
+  }
+}

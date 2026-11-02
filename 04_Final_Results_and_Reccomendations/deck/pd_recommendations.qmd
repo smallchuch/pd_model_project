@@ -1,0 +1,325 @@
+---
+# Revised 2026-11-02 from stage_04_lending_decisions_revision_brief. AI-written revision.
+# Render from this folder: quarto render pd_recommendations.qmd --to revealjs
+# Grade results come from 05_Applicant_PD_Dashboard/config/risk_grades.json (test_set_check).
+# Example applicants come from ../personas.json and are scored live with pd_app (needs the dashboard venv).
+title: "From Scores to Lending Decisions"
+subtitle: "Risk Grades, Decision Support and Portfolio Trade-Offs"
+author: "Evan Reynolds"
+date: "November 2026"
+format:
+  revealjs:
+    theme: [default, brand.scss]
+    slide-number: c/t
+    transition: fade
+    transition-speed: fast
+    width: 1280
+    height: 720
+    center: false
+    margin: 0
+    menu: false
+    progress: false
+    auto-stretch: false
+    fig-align: center
+    echo: false
+    embed-resources: true
+title-slide-attributes:
+    data-background-color: "#3D2E4F"
+    data-background-gradient: "radial-gradient(120% 135% at 12% 4%, #5C4577 0%, #3D2E4F 52%, #2C2039 100%)"
+execute:
+  warning: false
+  message: false
+jupyter: python3
+---
+
+```{python}
+#| label: setup
+#| include: false
+import os, sys, json, warnings
+warnings.filterwarnings("ignore")
+import numpy as np, pandas as pd
+import matplotlib.pyplot as plt
+
+def find_repo_root(start, marker="lib"):
+    p_ = os.path.abspath(start)
+    while True:
+        if os.path.isdir(os.path.join(p_, marker)):
+            return p_
+        parent = os.path.dirname(p_)
+        if parent == p_:
+            raise FileNotFoundError("No lib folder found above " + str(start))
+        p_ = parent
+
+REPO = find_repo_root(os.getcwd())
+sys.path.append(os.path.join(REPO, "lib"))
+
+from python_style_util import p, f, s, C, chart_title
+from deck_utils import deck_style, add_baseline
+PAL = deck_style()
+
+plt.rcParams.update({"font.size": 13, "axes.titlesize": 16, "axes.labelsize": 14,
+                     "xtick.labelsize": 13, "ytick.labelsize": 13, "legend.fontsize": 13})
+
+def card(num, label, note="", num_size=56, colour="#3D2E4F"):
+    n = f"<div style='font-family:monospace;font-size:{num_size}px;font-weight:700;color:{colour};line-height:1.05'>{num}</div>"
+    l = f"<div style='font-size:15px;letter-spacing:0.06em;text-transform:uppercase;color:#8A6D1F;margin-top:10px'>{label}</div>"
+    t = f"<div style='font-size:16px;color:#3a3a3a;margin-top:4px'>{note}</div>" if note else ""
+    return f"<div>{n}{l}{t}</div>"
+
+def grid(items, cols):
+    return ("<div style='display:grid;grid-template-columns:repeat(%d,1fr);gap:28px;margin-top:20px'>" % cols
+            + "".join(items) + "</div>")
+
+def pretty(name):
+    return DISPLAY.get(name, name.replace("_", " ").title())
+
+# Set to the verified deployed Streamlit URL before publishing. Blank = no link shown.
+APP_URL = ""
+
+PROJECT = REPO
+DASH = os.path.join(PROJECT, "05_Applicant_PD_Dashboard")
+HERE_04 = os.path.join(PROJECT, "04_Final_Results_and_Reccomendations")
+
+# ---- Grade results on the 50,349 in-policy test applicants (logreg_baseline_v1) ----
+rg = json.load(open(os.path.join(DASH, "config", "risk_grades.json")))
+chk = rg["test_set_check"]
+grades = pd.DataFrame({
+    "grade": [g["grade"] for g in rg["grades"]],
+    "label": [g["label"] for g in rg["grades"]],
+    "share": chk["share"],
+    "avg_pd": chk["avg_pd"],
+    "actual": chk["actual_rate"],
+})
+grades["defaults"] = grades["share"] * grades["actual"]        # defaults per applicant
+BASE = grades["defaults"].sum()                                # 8.6% in-policy test rate
+grades["default_share"] = grades["defaults"] / BASE
+N_TEST = 50_349                                                # in-policy test applicants
+N_ALL_APPS = 307_511                                           # all applications
+BASE_ALL = 0.0807                                              # all-rows rate, portfolio_stats.json
+
+# ---- Cut-off scenarios: keep Grade 1 up to Grade k ----
+rows = []
+for k in range(5, 0, -1):
+    kept = grades[grades["grade"] <= k]
+    appr = kept["share"].sum()
+    bad = kept["defaults"].sum() / appr
+    avoided = 1 - kept["defaults"].sum() / BASE
+    name = {5: "All grades included", 4: "Exclude Grade 5", 3: "Exclude Grades 4 to 5",
+            2: "Exclude Grades 3 to 5", 1: "Exclude Grades 2 to 5"}[k]
+    rows.append(dict(scenario=name, k=k, approval=appr, bad_rate=bad, avoided=avoided))
+cutoffs = pd.DataFrame(rows)
+
+# ---- Example applicants, scored live with the dashboard's own pipeline ----
+personas = json.load(open(os.path.join(HERE_04, "personas.json")))["personas"]
+sys.path.append(os.path.join(DASH, "pd_app"))
+try:
+    import shared_stage as ss
+    import scorecard
+    for per in personas:
+        row = ss.engineer(per["form"])
+        per["pd"] = scorecard.score(row)["pd"]
+        per["grade"] = ss.risk_grade(per["pd"])["grade"]
+    SCORED, SCORE_ERR = True, ""
+except Exception as e:                       # deck still renders without the model
+    SCORED, SCORE_ERR = False, repr(e)
+    for per in personas:
+        per["pd"], per["grade"] = np.nan, None
+MISMATCH = [per["target_grade"] for per in personas
+            if SCORED and per["grade"] != per["target_grade"]]
+
+def pct(x, d=1):
+    return "n/a" if pd.isna(x) else f"{x:.{d}%}"
+
+LABEL = dict(zip(grades["grade"], grades["label"]))
+g1, g5 = grades.loc[0, "actual"], grades.loc[4, "actual"]
+share5, ds5 = grades.loc[4, "share"], grades.loc[4, "default_share"]
+ex5 = cutoffs[cutoffs["k"] == 4].iloc[0]
+```
+
+## Portfolio Summary {.hero data-kick="Decision support"}
+
+```{python}
+#| output: asis
+print(grid([
+    card("5", "Risk grades"),
+    card(pct(share5, 0), "Applicants in Grade 5"),
+    card(pct(ds5, 0), "Defaults in Grade 5"),
+    card(pct(ex5.approval, 0), "Approval rate if Grade 5 excluded"),
+], 4))
+```
+
+**Excluding Grade 5 reduces the observed default rate from `{python} pct(BASE)` to `{python} pct(ex5.bad_rate)`.**
+
+Base rates are labelled by population. `{python} pct(BASE)` is the observed rate for the `{python} f"{N_TEST:,}"` in-policy test applicants used here. `{python} pct(BASE_ALL, 2)` is the rate across all `{python} f"{N_ALL_APPS:,}"` applications.
+
+## From PD to Risk Grade {data-kick="Risk grading"}
+
+**Applicant data → Predicted PD → Risk grade (1 to 5) → Decision support**
+
+Applicants are grouped into five risk grades based on predicted repayment difficulty. Grade 1 is the lowest risk and Grade 5 the highest.
+
+**The model produces risk estimates and grades. It does not determine eligibility or make approval and decline decisions.**
+
+## Default Rate by Risk Grade {data-kick="Risk grading"}
+
+```{python}
+#| fig-width: 9.5
+#| fig-height: 4.2
+#| out-height: "360px"
+fig, ax = plt.subplots(figsize=(9.5, 4.2))
+x = np.arange(5)
+cols = [PAL.ramp(v) for v in np.linspace(0.15, 0.95, 5)]
+bars = ax.bar(x, grades["actual"], color=cols, edgecolor="white", linewidth=1, width=0.6,
+              label="Observed repayment difficulty")
+ax.scatter(x, grades["avg_pd"], color=C.text, zorder=3, s=45, marker="D", label="Average predicted PD")
+ax.axhline(BASE, ls="--", color=C.text_muted, lw=1.2, label=f"Portfolio base {pct(BASE)}")
+ax.bar_label(bars, labels=[pct(v) for v in grades["actual"]], padding=4,
+             fontfamily=f("mono"), fontsize=13, color=C.text)
+ax.set_xticks(x, [f"Grade {g}" for g in grades["grade"]])
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
+ax.set_ylim(0, grades["actual"].max() * 1.22)
+ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=3, frameon=False)
+ax.grid(axis="x", visible=False)
+```
+
+**Observed repayment difficulty rises from `{python} pct(g1)` in Grade 1 to `{python} pct(g5)` in Grade 5.**
+
+## Where Defaults Are Concentrated {data-kick="Risk concentration"}
+
+```{python}
+#| fig-width: 9.5
+#| fig-height: 4.2
+#| out-height: "360px"
+fig, ax = plt.subplots(figsize=(9.5, 4.2))
+x = np.arange(5)
+w = 0.38
+b1 = ax.bar(x - w/2, grades["share"], w, color="#8C96A3", label="Share of applicants")
+b2 = ax.bar(x + w/2, grades["default_share"], w, color=PAL.ramp(0.95), label="Share of defaults")
+for b in (b1, b2):
+    ax.bar_label(b, labels=[pct(v, 0) for v in b.datavalues], padding=3,
+                 fontfamily=f("mono"), fontsize=12, color=C.text)
+ax.set_xticks(x, [f"Grade {g}" for g in grades["grade"]])
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
+ax.set_ylim(0, max(grades["share"].max(), grades["default_share"].max()) * 1.22)
+ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=2, frameon=False)
+ax.grid(axis="x", visible=False)
+```
+
+**Grade 5 holds `{python} pct(share5, 0)` of applicants but `{python} pct(ds5, 0)` of observed defaults.**
+
+## Cut-Off Trade-Offs {data-kick="Trade-offs"}
+
+```{python}
+#| output: asis
+print("| Scenario | Approval rate | Defaults avoided | Approved default rate |")
+print("|---|---:|---:|---:|")
+for _, r in cutoffs.iterrows():
+    print(f"| {r.scenario} | {pct(r.approval, 0)} | {pct(r.avoided, 0)} | {pct(r.bad_rate)} |")
+print(f"\nBase: {pct(BASE)} observed default rate across {N_TEST:,} in-policy test applicants.")
+```
+
+**Tighter cut-offs reduce observed default rates but also reduce approval rates.**
+
+## Applicant Examples {data-kick="Examples"}
+
+```{python}
+#| output: asis
+rows = []
+for per in personas:
+    fm = per["form"]
+    ratio = fm["loan_amount"] / fm["goods_price"]
+    pd_txt = pct(per["pd"]) if SCORED else "not scored"
+    grade_txt = LABEL[per["grade"]] if SCORED else "not scored"
+    rows.append(
+        f"<tr style='border-bottom:1px solid #D9D2E3'><td>Grade {per['target_grade']}</td>"
+        f"<td style='text-align:right'>{pd_txt}</td><td>{grade_txt}</td><td>{fm['ext_1_band']}</td>"
+        f"<td style='text-align:right'>{fm['employment_years']:g} yrs</td>"
+        f"<td style='text-align:right'>{ratio:.2f}</td></tr>")
+print("<table style='font-size:17px;width:100%;border-collapse:collapse' cellpadding='6'>"
+      "<thead><tr style='border-bottom:2px solid #3D2E4F;text-align:left'>"
+      "<th>Example</th><th style='text-align:right'>Predicted PD</th><th>Scored grade</th>"
+      "<th>External scores</th><th style='text-align:right'>Job tenure</th><th style='text-align:right'>LVR</th>"
+      "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>")
+```
+
+**Loan amount (500,000) and term (36 months) held constant.** LVR is the Credit-to-Goods Ratio. These examples can be recreated in the live applicant assessment tool.
+
+```{python}
+#| output: asis
+if not SCORED:
+    print("\n*PD not scored in this render. Run from the dashboard environment.*")
+if MISMATCH:
+    print(f"\n**QA flag:** example(s) for grade(s) {MISMATCH} score into a different grade. Fix before publishing.")
+```
+
+## Decision Support by Risk Grade {data-kick="Decision support"}
+
+```{python}
+#| output: asis
+paths = {1: "Streamlined assessment", 2: "Standard assessment", 3: "Standard assessment",
+         4: "Additional assessment", 5: "Refer or exclude under selected cut-off"}
+print("| Grade | Risk level | Assessment path |")
+print("|---|---|---|")
+for g in grades["grade"]:
+    print(f"| Grade {g} | {LABEL[g]} | {paths[g]} |")
+print("\n**Risk grade supports assessment. It does not replace affordability, eligibility, verification or credit policy.**")
+```
+
+## Stakeholder Value {data-kick="Application"}
+
+:::: {.columns}
+::: {.column width="50%"}
+**Credit and Lending**
+
+Consistent risk segmentation alongside affordability, policy and assessment.
+
+**Portfolio Risk**
+
+Visible risk concentration across grades and realised repayment outcomes.
+:::
+::: {.column width="50%"}
+**Management**
+
+Clear approval-rate and portfolio-risk trade-offs under different cut-off scenarios.
+
+**Model and Analytics**
+
+Monitoring of grade distribution, realised outcomes and model performance over time.
+:::
+::::
+
+## Model Limitations {data-kick="Limitations"}
+
+**Population.** Observed applicants only. No reject inference.
+
+**Cut-off analysis.** No loss or margin data. Cut-offs show risk trade-offs, not profit optimisation.
+
+**Calibration.** PD estimates have not undergone formal calibration.
+
+**Data.** Based on anonymised Home Credit data, not a specific Australian lending portfolio.
+
+## From Model to Decision Support {.closing background-color="#3D2E4F" background-gradient="radial-gradient(120% 135% at 88% 96%, #5C4577 0%, #3D2E4F 52%, #2C2039 100%)"}
+
+<div class="rule"></div>
+<div class="lead" style="font-size:34px;line-height:1.3">The final scorecard separates applicants into distinct risk grades that can support consistent credit assessment and portfolio decision-making.</div>
+<div class="sub" style="font-size:20px">The model supports lending judgement. It does not replace affordability, eligibility, verification or credit policy.</div>
+
+```{python}
+#| output: asis
+if APP_URL:
+    print(f"\n<div style='font-size:20px;margin-top:24px'><a href='{APP_URL}'>View Live Scoring Application</a></div>")
+```
+
+```{=html}
+<script>
+window.addEventListener('load', () => {
+  const t = document.getElementById('title-slide');
+  if (t && !t.querySelector('.cover-meta')) {
+    const head = document.createElement('div');
+    head.className = 'cover-head';
+    head.innerHTML = '<div class="cover-kick">Stage 04 &nbsp;·&nbsp; From Scores to Lending Decisions</div><div class="cover-rule"></div>';
+    t.insertBefore(head, t.firstChild);
+  }
+});
+</script>
+```

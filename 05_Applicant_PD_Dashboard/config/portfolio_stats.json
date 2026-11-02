@@ -1,0 +1,6 @@
+{
+  "description": "Reference figures shown next to the PD. Written by AI, 2026-10-16, from train_woe.parquet / train_raw.parquet.",
+  "in_policy_default_rate": 0.0867,
+  "in_policy_rows": 201741,
+  "all_rows_default_rate": 0.0807
+}

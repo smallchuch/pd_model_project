@@ -1,0 +1,71 @@
+{
+  "description": "Example applicants, one per risk grade. Written by AI, 2026-10-27. Field labels match the Streamlit form exactly, so the same file can drive a 'load persona' option in the app. Age is narrative and validation only: the model does not use it.",
+  "loan_note": "All personas borrow 500,000 over 36 months so only the risk traits differ. 24 months and a 450,000 purchase price are avoided (known risk spikes, see model_notes.json).",
+  "personas": [
+    {
+      "id": "g1_steady_professional",
+      "name": "The Steady Professional",
+      "target_grade": 1,
+      "story": "Long tenure in the public sector, good credit history, paid a deposit.",
+      "form": {
+        "age": 52, "income_type": "State servant", "occupation": "Accountants",
+        "org_option": "Government and emergency services", "education": "Bachelor degree",
+        "employment_years": 18.0, "area_rating": 1,
+        "ext_1_band": "Good", "ext_2_band": "Good", "ext_3_band": "Good",
+        "loan_amount": 500000, "term_months": 36, "goods_price": 600000
+      }
+    },
+    {
+      "id": "g2_established_worker",
+      "name": "The Established Worker",
+      "target_grade": 2,
+      "story": "Typical stable applicant: average credit, nine years in the same job.",
+      "form": {
+        "age": 41, "income_type": "Working", "occupation": "Core staff",
+        "org_option": "Health and childcare", "education": "Year 12",
+        "employment_years": 9.0, "area_rating": 2,
+        "ext_1_band": "Average", "ext_2_band": "Average", "ext_3_band": "Average",
+        "loan_amount": 500000, "term_months": 36, "goods_price": 550000
+      }
+    },
+    {
+      "id": "g3_thin_margin_earner",
+      "name": "The Thin-Margin Earner",
+      "target_grade": 3,
+      "story": "Mid-career with no stand-out strengths and a small deposit.",
+      "form": {
+        "age": 33, "income_type": "Working", "occupation": "Sales staff",
+        "org_option": "Other business or industry (not listed)", "education": "Year 12",
+        "employment_years": 4.0, "area_rating": 2,
+        "ext_1_band": "Average", "ext_2_band": "Average", "ext_3_band": "Average",
+        "loan_amount": 500000, "term_months": 36, "goods_price": 520000
+      }
+    },
+    {
+      "id": "g4_early_career_stretch",
+      "name": "The Early-Career Stretch",
+      "target_grade": 4,
+      "story": "Young, short job tenure, borrowing the full purchase price.",
+      "form": {
+        "age": 25, "income_type": "Working", "occupation": "Laborers",
+        "org_option": "Construction", "education": "Year 12",
+        "employment_years": 1.5, "area_rating": 3,
+        "ext_1_band": "Average", "ext_2_band": "Average", "ext_3_band": "Average",
+        "loan_amount": 500000, "term_months": 36, "goods_price": 500000
+      }
+    },
+    {
+      "id": "g5_fragile_applicant",
+      "name": "The Fragile Applicant",
+      "target_grade": 5,
+      "story": "Weak credit history, new job, borrowing more than the purchase price.",
+      "form": {
+        "age": 23, "income_type": "Working", "occupation": "Low-skill Laborers",
+        "org_option": "Self-employed", "education": "Left school before Year 12",
+        "employment_years": 0.5, "area_rating": 3,
+        "ext_1_band": "Below average", "ext_2_band": "Below average", "ext_3_band": "Below average",
+        "loan_amount": 500000, "term_months": 36, "goods_price": 480000
+      }
+    }
+  ]
+}

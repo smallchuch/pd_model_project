@@ -1,0 +1,155 @@
+{
+  "description": "Maps the credit score band chosen on the application form to a representative EXT_SOURCE value. Derived from binning_process.pkl and train_raw.parquet.",
+  "rule": "Lowest band = worst bin, top band = best bin, middle three bands = bin holding the 25th, 50th and 75th percentile of applicants with a score. Representative value = median of training values in that bin. Same positions for all three scores.",
+  "labels": "Equifax Australia bands (0-1200 scale). EXT_SOURCE values are anonymised Home Credit scores, not Equifax scores, so ranges are an approximate translation.",
+  "missing_label": "No Credit Score",
+  "fields": {
+    "EXT_SOURCE_1": {
+      "bands": [
+        {
+          "label": "Below average",
+          "score_range": "0-459",
+          "bin_index": 0,
+          "value": 0.197,
+          "train_default_rate": 0.1553,
+          "woe": -0.7392
+        },
+        {
+          "label": "Average",
+          "score_range": "460-660",
+          "bin_index": 1,
+          "value": 0.345,
+          "train_default_rate": 0.0928,
+          "woe": -0.153
+        },
+        {
+          "label": "Good",
+          "score_range": "661-734",
+          "bin_index": 2,
+          "value": 0.472,
+          "train_default_rate": 0.0676,
+          "woe": 0.1916
+        },
+        {
+          "label": "Very good",
+          "score_range": "735-852",
+          "bin_index": 4,
+          "value": 0.659,
+          "train_default_rate": 0.046,
+          "woe": 0.5999
+        },
+        {
+          "label": "Excellent",
+          "score_range": "853-1200",
+          "bin_index": 5,
+          "value": 0.781,
+          "train_default_rate": 0.0303,
+          "woe": 1.0345
+        }
+      ],
+      "missing": {
+        "value": null,
+        "woe": -0.058,
+        "note": "Scored with the Missing bin's own WoE (metric_missing='empirical' in the driver scan export)."
+      }
+    },
+    "EXT_SOURCE_2": {
+      "bands": [
+        {
+          "label": "Below average",
+          "score_range": "0-459",
+          "bin_index": 0,
+          "value": 0.074,
+          "train_default_rate": 0.2192,
+          "woe": -1.1621
+        },
+        {
+          "label": "Average",
+          "score_range": "460-660",
+          "bin_index": 4,
+          "value": 0.417,
+          "train_default_rate": 0.0928,
+          "woe": -0.1525
+        },
+        {
+          "label": "Good",
+          "score_range": "661-734",
+          "bin_index": 7,
+          "value": 0.573,
+          "train_default_rate": 0.0679,
+          "woe": 0.1875
+        },
+        {
+          "label": "Very good",
+          "score_range": "735-852",
+          "bin_index": 10,
+          "value": 0.657,
+          "train_default_rate": 0.0524,
+          "woe": 0.4624
+        },
+        {
+          "label": "Excellent",
+          "score_range": "853-1200",
+          "bin_index": 14,
+          "value": 0.752,
+          "train_default_rate": 0.0288,
+          "woe": 1.0851
+        }
+      ],
+      "missing": {
+        "value": null,
+        "woe": 0.0319,
+        "note": "Scored with the Missing bin's own WoE (metric_missing='empirical' in the driver scan export)."
+      }
+    },
+    "EXT_SOURCE_3": {
+      "bands": [
+        {
+          "label": "Below average",
+          "score_range": "0-459",
+          "bin_index": 0,
+          "value": 0.121,
+          "train_default_rate": 0.2194,
+          "woe": -1.1631
+        },
+        {
+          "label": "Average",
+          "score_range": "460-660",
+          "bin_index": 3,
+          "value": 0.393,
+          "train_default_rate": 0.0952,
+          "woe": -0.1807
+        },
+        {
+          "label": "Good",
+          "score_range": "661-734",
+          "bin_index": 6,
+          "value": 0.539,
+          "train_default_rate": 0.0585,
+          "woe": 0.3454
+        },
+        {
+          "label": "Very good",
+          "score_range": "735-852",
+          "bin_index": 9,
+          "value": 0.674,
+          "train_default_rate": 0.0407,
+          "woe": 0.7269
+        },
+        {
+          "label": "Excellent",
+          "score_range": "853-1200",
+          "bin_index": 11,
+          "value": 0.798,
+          "train_default_rate": 0.0314,
+          "woe": 0.9963
+        }
+      ],
+      "missing": {
+        "value": null,
+        "woe": -0.154,
+        "note": "Scored with the Missing bin's own WoE (metric_missing='empirical' in the driver scan export)."
+      }
+    }
+  }
+}

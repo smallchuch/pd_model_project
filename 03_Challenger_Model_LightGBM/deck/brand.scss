@@ -1,0 +1,256 @@
+/*-- scss:defaults --*/
+// ══════════════════════════════════════════════════════════════════════════
+// Flagship PD Model — deck theme  (reusable across EDA / PD / LGD / EAD stages)
+// Palette + type mirror python_style_util.py so slides and figures read as one
+// system. Jacaranda (purple) + gold on warm off-white — a distinctive,
+// colour-blind-safe identity.
+//
+// ── HOW TO CUSTOMISE ──────────────────────────────────────────────────────
+//  • Colours : edit the "Brand tokens" hexes just below. Everything (headings,
+//              accents, callouts, cover, closing, motif) is built from them.
+//              Keep them in step with python_style_util.py + deck_utils.BRAND_RAMP
+//              (the chart bars) so slides and figures stay one system.
+//  • Fonts   : edit $body-font / $head-font / $mono-font below.
+//  • Sizes   : $presentation-font-size-root scales the whole deck at once.
+//  • Layout  : each block below is labelled — "Content slides", "Callouts",
+//              "Figures", "COVER", "HERO", "CLOSING". Change one block in
+//              isolation without touching the rest.
+//  • New stage deck: copy this file + _stage_template.qmd, change the title /
+//              kicker / footer, write your slides. No other edits needed.
+// ══════════════════════════════════════════════════════════════════════════
+
+$jac-100: #D7CEE2;
+$jac-200: #A995C0;
+$jac-300: #7A5C9E;
+$jac-400: #5C4577;
+$jac-500: #3D2E4F;
+$gold-100:#EFE1C5;
+$gold-200:#DBBE80;
+$gold-300:#C89B3C;
+$gold-400:#96742D;
+$olive-300:#67724F;
+$ink:     #2F2F2F;
+$ink-2:   #787878;
+$hair:    #E4E0D8;
+$page:    #F7F5F0;
+$surface: #FDFCFB;
+
+$body-font: "DM Sans", "Inter", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+$head-font: "Inter", "DM Sans", system-ui, Arial, sans-serif;
+$mono-font: "JetBrains Mono", ui-monospace, "SFMono-Regular", "Courier New", monospace;
+
+$font-family-sans-serif:      $body-font !default;
+$presentation-heading-font:   $head-font !default;
+$presentation-font-size-root: 26px;
+$presentation-line-height:    1.42;
+
+$body-bg:    $page;
+$body-color: $ink;
+$link-color: $jac-400;
+
+$presentation-heading-color:       $jac-500;
+$presentation-heading-font-weight: 700;
+$presentation-h2-font-size:        1.45em;
+
+$selection-bg: $jac-200;
+
+/*-- scss:rules --*/
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+// ── HARD FONT ASSIGNMENT — fixes the silent Times-New-Roman fallback ─────────
+:root { --r-main-font: #{$body-font}; --r-heading-font: #{$head-font}; }
+.reveal, .reveal p, .reveal li, .reveal td, .reveal th { font-family: $body-font; }
+.reveal h1, .reveal h2, .reveal h3, .reveal h4,
+.reveal .title, .reveal .subtitle { font-family: $head-font; }
+.reveal code, .reveal pre { font-family: $mono-font; }
+
+.reveal { color: $ink; -webkit-font-smoothing: antialiased; }
+.reveal .slides { text-align: left; }
+
+// ── Content slides: FULL-HEIGHT flex column ─────────────────────────────────
+// Title anchored top, body/figure fills the mid-band, callout pinned to bottom.
+// NOTE: reveal.js writes an inline `display:block` on the active slide, so the
+// flex layout must be forced with !important on the present slide (scoping to
+// .present keeps hidden slides `display:none`).
+.reveal .slides > section:not(#title-slide):not(.closing) {
+  height: 100%; box-sizing: border-box; padding: 60px 64px 62px;
+}
+.reveal .slides > section.present:not(#title-slide):not(.closing) {
+  display: flex !important; flex-direction: column; align-items: stretch;
+}
+// text-only slides (no chart): centre the whole group so there's no hollow middle
+.reveal .slides > section.present:not(#title-slide):not(.closing):not(.hero):not(:has(.cell)) {
+  justify-content: center;
+}
+
+.reveal p, .reveal li { color: $ink; }
+.reveal strong { color: $jac-500; font-weight: 700; }
+.reveal a { color: $jac-400; text-decoration: none; border-bottom: 1px solid rgba($jac-300,.35); }
+
+// ── Section kicker (in-flow, above the heading) ─────────────────────────────
+.reveal section[data-kick]::before {
+  content: attr(data-kick);
+  display: block; margin: 0 0 9px; flex: 0 0 auto;
+  font-family: $mono-font; font-size: 0.5em; font-weight: 600;
+  letter-spacing: 0.2em; text-transform: uppercase; color: $gold-400;
+}
+
+// ── Headings ────────────────────────────────────────────────────────────────
+.reveal h2 {
+  position: relative; flex: 0 0 auto;
+  font-weight: 800; letter-spacing: -0.02em; line-height: 1.06;
+  color: $jac-500; margin: 0 0 20px; padding-bottom: 15px;
+}
+.reveal h2::after {
+  content: ""; position: absolute; left: 0; bottom: 0;
+  width: 84px; height: 4px; border-radius: 4px;
+  background: linear-gradient(90deg, $gold-300 0 42px, $jac-300 42px 100%);
+}
+.reveal h3 { color: $jac-400; font-weight: 700; }
+
+// ── Type niceties ───────────────────────────────────────────────────────────
+.reveal .stat { color: $jac-400; font-weight: 700; }
+.reveal .gold { color: $gold-400; font-weight: 700; }
+.reveal ul { margin-left: .2em; }
+.reveal ul li { margin: .34em 0; padding-left: .15em; }
+.reveal ul li::marker { color: $gold-300; }
+
+// ── Callouts: real presence; pinned to the bottom only on figure slides ─────
+.reveal .takeaway, .reveal .caveat {
+  position: relative; margin-top: .9em; flex: 0 0 auto;
+  background: linear-gradient(0deg, rgba($jac-300,.05), rgba($jac-300,.05)), $surface;
+  border: 1px solid $hair; border-left: 6px solid $jac-300;
+  box-shadow: 0 2px 8px rgba(61,46,79,.07);
+  padding: .66em 1.05em .68em 1.15em; border-radius: 10px;
+  font-size: .78em; line-height: 1.42;
+}
+// figure slides: the chart cell fills the middle, callout sits at the floor
+.reveal section:has(.cell) .takeaway, .reveal section:has(.cell) .caveat { margin-top: auto; }
+.reveal .takeaway::before, .reveal .caveat::before {
+  content: "Takeaway"; display: block;
+  font-family: $mono-font; font-size: .72em; font-weight: 700;
+  letter-spacing: .14em; text-transform: uppercase; color: $jac-400; margin-bottom: .28em;
+}
+.reveal .caveat { border-left-color: $gold-300;
+  background: linear-gradient(0deg, rgba($gold-300,.09), rgba($gold-300,.09)), $surface; }
+.reveal .caveat::before { content: "Watch-out"; color: $gold-400; }
+
+// ── Figures: fill the mid-band, centred on a clean card ─────────────────────
+// display:contents collapses EVERY Quarto output wrapper (Quarto emits
+// .cell-output-display > div > figure > p > img) so the <img> is a direct flex
+// child of .cell. That makes max-height:100% resolve against the cell's real
+// height, so a tall chart shrinks to fit the mid-band instead of overflowing
+// up over the heading or down into the takeaway. overflow:hidden is a backstop.
+.reveal .cell {
+  flex: 1 1 auto; min-height: 0; min-width: 0; margin: 14px 0 6px;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; padding: 4px 12px 16px;   // room for the card's drop shadow
+}
+.reveal .cell-output,
+.reveal .cell-output-display,
+.reveal .cell-output-display div,
+.reveal .cell-output-display figure,
+.reveal .cell-output-display p { display: contents; }
+.reveal .cell figcaption { display: none; }
+.reveal .cell img {
+  box-sizing: border-box; min-width: 0; min-height: 0;
+  max-height: 360px; max-width: 100%; width: auto; height: auto; object-fit: contain;
+  background: $surface; border: 1px solid $hair; border-radius: 12px;
+  padding: 12px 14px; box-shadow: 0 8px 24px rgba(61,46,79,.10);
+}
+
+// ── Footer + slide number ───────────────────────────────────────────────────
+.reveal .footer, .reveal .slide-number {
+  font-family: $mono-font; font-size: 12px; letter-spacing: .06em;
+}
+.reveal .footer { text-transform: uppercase; color: $ink-2; opacity: .68; }
+.reveal .slide-number { background: transparent; color: $jac-400; font-weight: 600; }
+.reveal:has(#title-slide.present) .footer,
+.reveal:has(section.closing.present) .footer,
+.reveal:has(#title-slide.present) .slide-number,
+.reveal:has(section.closing.present) .slide-number { display: none !important; }
+
+// ══════════════════════════════════════════════════════════════════════════
+// COVER — full-bleed via title-slide-attributes; centred flow, upper weight
+// ══════════════════════════════════════════════════════════════════════════
+#title-slide {
+  height: 100%; box-sizing: border-box; text-align: left; color: $surface;
+  padding: 0 92px !important; overflow: hidden;
+}
+#title-slide.present { display: flex !important; flex-direction: column; justify-content: center; }
+// oversized faint "driver-scan" bar motif, bleeding off the lower-right corner
+#title-slide::after {
+  content: ""; position: absolute; right: -60px; bottom: -70px; z-index: 0;
+  width: 620px; height: 440px; opacity: .12; pointer-events: none;
+  background-repeat: no-repeat; background-position: bottom right; background-size: contain;
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 420'><g fill='%23DBBE80'><rect x='0' y='40' width='72' height='380' rx='12'/><rect x='100' y='110' width='72' height='310' rx='12'/><rect x='200' y='180' width='72' height='240' rx='12'/><rect x='300' y='240' width='72' height='180' rx='12'/><rect x='400' y='300' width='72' height='120' rx='12'/><rect x='500' y='350' width='72' height='70' rx='12'/></g></svg>");
+}
+#title-slide > * { position: relative; z-index: 1; }
+#title-slide .cover-head { margin-bottom: 46px; }
+#title-slide .cover-kick {
+  font-family: $mono-font; font-size: 15px; font-weight: 600;
+  letter-spacing: .24em; text-transform: uppercase; color: $gold-200;
+}
+#title-slide .cover-rule { width: 62px; height: 4px; border-radius: 4px; background: $gold-300; margin-top: 16px; }
+#title-slide .title {
+  color: $surface; font-weight: 800; font-size: 3.15em;
+  letter-spacing: -0.03em; line-height: 1.02; margin: 0 0 .22em; max-width: 20ch;
+}
+#title-slide .subtitle { color: $jac-100; font-weight: 400; font-size: 1.02em; margin: 0 0 1.5em; }
+#title-slide .quarto-title-authors { display: block; text-align: left; padding: 0; border: 0; }
+#title-slide .quarto-title-author-name, #title-slide .author, #title-slide .date {
+  font-family: $mono-font; color: $gold-200; letter-spacing: .05em; text-align: left;
+}
+#title-slide .author, #title-slide .quarto-title-author-name { font-size: .8em; font-weight: 600; margin-bottom: .1em; }
+#title-slide .date { color: $jac-200; font-size: .72em; }
+.reveal .cover-meta { display: flex; gap: 46px; align-items: baseline; margin-top: 42px;
+  padding-top: 30px; border-top: 1px solid rgba(255,255,255,.14); }
+.reveal .cover-meta .cm { display: flex; flex-direction: column; gap: 5px; }
+.reveal .cover-meta .cm-n { font-family: $mono-font; font-weight: 700; font-size: 1.72em; color: $surface; line-height: 1; }
+.reveal .cover-meta .cm-l { font-family: $mono-font; font-size: .56em; letter-spacing: .13em; text-transform: uppercase; color: $jac-200; }
+.reveal .cover-meta .cm:not(:first-child) { border-left: 1px solid rgba(255,255,255,.18); padding-left: 46px; }
+
+// ══════════════════════════════════════════════════════════════════════════
+// HERO "answer-first" stat treatment (short version)
+// ══════════════════════════════════════════════════════════════════════════
+.reveal .hero-wrap { display: grid; grid-template-columns: 0.82fr 1.18fr; gap: 56px;
+  align-items: center; margin: auto 0; }
+.reveal .hero-num {
+  font-family: $mono-font; font-weight: 800; font-size: 7.2em; line-height: .9;
+  color: $jac-400; letter-spacing: -0.03em;
+}
+.reveal .hero-num small { display:block; font-size: .16em; font-weight: 600; letter-spacing:.13em;
+  text-transform: uppercase; color: $gold-400; margin-top: 1.2em; line-height: 1.4; }
+.reveal .hero-col p { margin: 0 0 .55em; }
+.reveal .hero-col li { font-size: 1.0em; margin: .46em 0; }
+
+// ══════════════════════════════════════════════════════════════════════════
+// CLOSING — full-bleed via slide background attrs; centred flow content
+// ══════════════════════════════════════════════════════════════════════════
+.reveal section.closing {
+  height: 100%; box-sizing: border-box; color: $surface;
+  padding: 0 92px !important; overflow: hidden;
+}
+.reveal section.closing.present { display: flex !important; flex-direction: column; justify-content: center; }
+.reveal section.closing > h2 { display: none; }
+// mirrored bar motif, faint, bleeding off the upper-right corner
+.reveal section.closing::after {
+  content: ""; position: absolute; right: -60px; top: -70px; z-index: 0;
+  width: 560px; height: 400px; opacity: .11; pointer-events: none;
+  transform: scaleY(-1);
+  background-repeat: no-repeat; background-position: top right; background-size: contain;
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 420'><g fill='%23DBBE80'><rect x='0' y='40' width='72' height='380' rx='12'/><rect x='100' y='110' width='72' height='310' rx='12'/><rect x='200' y='180' width='72' height='240' rx='12'/><rect x='300' y='240' width='72' height='180' rx='12'/><rect x='400' y='300' width='72' height='120' rx='12'/><rect x='500' y='350' width='72' height='70' rx='12'/></g></svg>");
+}
+.reveal section.closing > * { position: relative; z-index: 1; }
+.reveal .closing .rule { width: 84px; height: 5px; border-radius: 4px;
+  background: linear-gradient(90deg, $gold-300 0 46px, $jac-300 46px 100%); margin: 0 0 34px; }
+.reveal .closing .lead {
+  font-family: $head-font; font-size: 2.8em; font-weight: 800;
+  letter-spacing: -0.025em; color: $surface; margin: 0 0 .34em; line-height: 1.03;
+}
+.reveal .closing .sub { color: $jac-100; font-size: 1.02em; max-width: 46ch; line-height: 1.5; }
+.reveal .closing .sub em { color: $gold-200; font-style: italic; }
+.reveal .closing .tag {
+  font-family: $mono-font; font-size: .62em; letter-spacing: .18em; text-transform: uppercase;
+  color: $gold-200; margin-top: 2em;
+}

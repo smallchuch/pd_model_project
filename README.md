@@ -2,54 +2,55 @@
 
 # Probability of Default (PD) Model for Consumer Lending
 
-An end-to-end credit risk project: from raw application data to a deployed tool that estimates an applicant's probability of payment difficulty, assigns a risk grade, and suggests an assessment pathway.
+An end-to-end credit risk project: from raw application data to a deployed tool that estimates an applicant's probability of payment difficulty, assigns a risk grade, and shows the assessment path for that grade.
 
-**[Live app](TODO) · [Portfolio page](TODO) · [EDA / WOE / IV deck](TODO) · [Model deck](TODO)**
+**[Live app](TODO) · [Portfolio page](TODO) · [EDA deck](01_Default_Rate_Driver_Scan_EDA/deck/01_eda.html) · [Baseline deck](02_PD_Model_Development/deck/02_pd_model.html) · [Challenger deck](03_Challenger_Model_LightGBM/deck/03_challenger.html) · [Results deck](04_Final_Results_and_Reccomendations/deck/pd_recommendations.html)**
 
 ---
 
 ## 1. Purpose and business problem
-<!-- Task 2.3.1 -->
 
 Lenders need a consistent way to rank applicants by credit risk at the point of application, so effort goes where it matters: faster decisions for low-risk applicants, closer review for high-risk ones.
 
 This project builds a PD model on application-time data and shows how its output could support (not replace) a credit assessment process:
 
 - **Question:** Which applicant characteristics best predict payment difficulty, and how well can a transparent model rank applicants by risk?
-- **Output:** an estimated probability of payment difficulty, a risk grade, and a recommended assessment pathway per grade.
+- **Output:** an estimated probability of payment difficulty, a risk grade, and an assessment path per grade.
 - **Audience:** credit risk and lending teams who need a model they can explain to policy, validation and regulators.
 
 ## 2. Dataset
-<!-- Task 2.3.2 -->
 
 | | |
 |---|---|
 | Source | Home Credit Default Risk (Kaggle), `application_train` table |
 | Scope | Application-time data only; the six behavioural / bureau history tables are not used |
 | Target | `TARGET` = 1 if the client had payment difficulties (a lender-defined proxy, not a 90+ DPD or Basel default) |
-| Rows used | 307,507 after cleaning: train 246,005 / test 61,502 (80/20 split, stratified, `random_state=42`) |
+| Rows used | 307,507 after cleaning: train 246,005 / test 61,502 (80/20 split, stratified on the target, `random_state=42`) |
 | Default rate | 8.07% in both train and test |
 
-The data is not stored in this repo. Download it from Kaggle and place it in `TODO: data folder path`.
+The data is not stored in this repo. Download it from Kaggle and place `application_train.csv` in `Datasets/Home Credit Default Risk/` at the repo root. Running notebook 01 creates the raw and WOE frames that notebooks 02 and 03 read.
 
 ## 3. Project structure
-<!-- Task 2.3.3 -->
 
 ```
-Flagship PD Model Project/
-├── 01_TODO_EDA_folder/              EDA, data quality, WOE / IV driver scan
-├── 02_PD_Model_Development/          Baseline logistic regression scorecard
-├── 03_Challenger_Model_LightGBM/     LightGBM challenger, same features and split
-├── 04_Final_Results_and_Reccomendations/  Personas, risk grades, business recommendations
-└── 05_Applicant_PD_Dashboard/        Streamlit app, model registry, tests
+pd_model_project/
+├── 01_Default_Rate_Driver_Scan_EDA/        EDA, data quality, WOE / IV driver scan (notebook + deck)
+├── 02_PD_Model_Development/                Baseline logistic regression scorecard (notebook + deck, inputs/)
+├── 03_Challenger_Model_LightGBM/           LightGBM challenger, same features and split (notebook + deck)
+├── 04_Final_Results_and_Reccomendations/   Results deck, borrower personas, assessment path by grade
+├── 05_Applicant_PD_Dashboard/              Streamlit app, model registry, config, tests
+├── lib/                                    Shared helpers used by the notebooks and decks
+├── Model Defense Work/                     Self-check questions on the EDA
+├── PD_Model_Project_Outline.md             Stage-by-stage reference for the pipeline
+├── requirements.txt
+└── README.md
 ```
 
-<!-- TODO: confirm folder names (01 folder name; consider fixing the "Reccomendations" spelling) and add deck file locations. -->
+<!-- TODO: fix the "Reccomendations" spelling in the folder name once deck references are checked. -->
 
 Each notebook follows the same pattern for every step: **Explanation** (what I expect before running), **Observation** (what the output showed), **Decision** (what I did about it).
 
 ## 4. EDA, WOE and IV
-<!-- Task 2.3.4 -->
 
 - Profiled data quality and missingness; treated informative missingness (e.g. external credit scores, the employment-days sentinel) as its own bin rather than imputing.
 - Binned every candidate feature and ranked them by **Information Value (IV)**, with bins fitted on train only and applied to test to avoid leakage.
@@ -61,7 +62,6 @@ Each notebook follows the same pattern for every step: **Explanation** (what I e
 <!-- TODO: add the top-10 IV table or a link to the chart; one line on the most interesting finding. -->
 
 ## 5. Baseline model: logistic regression scorecard
-<!-- Task 2.3.5 -->
 
 A WOE-encoded logistic regression on **12 features**, chosen for transparency: each feature's effect is visible in its coefficient, as in a traditional scorecard.
 
@@ -69,42 +69,46 @@ A WOE-encoded logistic regression on **12 features**, chosen for transparency: e
 |---|---|---|
 | Test Gini | at least 0.45 | **0.493** ✅ |
 | Train vs test Gini gap | at most 0.02 | 0.003 ✅ |
-| Coefficient signs | all in the expected direction | ✅ <!-- TODO confirm wording --> |
-| Rank ordering across test PD deciles | no reversals | ✅ |
+| Coefficient signs | no significantly wrong sign | 11 of 12 negative. The one positive coefficient (NAME_INCOME_TYPE, +0.06) has a 95% interval spanning zero, so it passes ✅ |
+| Rank ordering across test PD deciles | no reversals | ✅ from 1.4% in the lowest decile to 26.3% in the highest, with no reversals |
 
-Two features were dropped during development: one for collinearity (r = 0.94 with employment days) and one for a wrong-signed coefficient.
+Two features were dropped during development: one for collinearity (r = 0.94 with employment days) and one for a wrong-signed coefficient in the first fit.
+
+<!-- TODO: add the 95% intervals for the other 11 coefficients to notebook 02 (cell 54 still has a placeholder). -->
 
 ## 6. Challenger model: LightGBM
-<!-- Task 2.3.6 -->
 
 A gradient-boosted tree model on the same 12 features, rows and split, used to benchmark how much signal the scorecard leaves on the table.
 
-<!-- TODO once notebook 03 is done:
-| Metric | Champion (logistic) | Challenger (LightGBM) |
+| Metric (test unless stated) | Champion (logistic) | Challenger (LightGBM, refit) |
 |---|---|---|
-| Test Gini | 0.493 | TODO |
-| KS | 0.362 | TODO |
-| Train/test gap | 0.003 | TODO |
-Decision: retain scorecard / adopt challenger, and why. -->
+| Gini | 0.493 | 0.522 |
+| KS | 0.362 | 0.389 |
+| Train / test Gini gap | 0.003 | 0.054 |
 
-## 7. Borrower personas and business recommendations
-<!-- Task 2.3.7 -->
+The uplift is +0.029 Gini. The agreed criteria put that in the "retain and review" band (0.008 to 0.03), so the scorecard stays as champion. The first LightGBM fit failed the train/test gap check (0.065 against a 0.06 limit), so it was refitted with stronger regularisation (`num_leaves` 20, `min_child_samples` 300).
 
-Example applicants, one per risk grade, show how the model separates applicants across the risk spectrum and what each grade means for the assessment process.
+**Decision:** keep the scorecard as champion. Review the GBM's interactions to see whether any of the uplift is worth bringing into the scorecard.
 
-| Risk grade | Predicted PD band | Example persona | Recommended pathway |
+<!-- TODO: confirm the decision wording and record the interaction review once it is done. -->
+
+## 7. Borrower personas and assessment paths
+
+Five example applicants, one per risk grade, show how the model separates applicants across the risk spectrum. Each borrows 500,000 over 36 months, so only the risk traits differ.
+
+| Grade | Predicted PD band | Example persona | Assessment path |
 |---|---|---|---|
-| Lower risk | TODO | TODO | Streamlined, subject to normal policy and affordability checks |
-| Standard risk | TODO | TODO | Standard credit assessment |
-| Elevated risk | TODO | TODO | Enhanced assessment, extra verification and/or manual review |
-| Highest risk | TODO | TODO | Highest level of manual review, or outside risk appetite per policy |
+| 1 · Very low risk | under 3% | The Steady Professional | Streamlined assessment |
+| 2 · Low risk | 3% to 6% | The Established Worker | Standard assessment |
+| 3 · Moderate risk | 6% to 10% | The Thin-Margin Earner | Standard assessment |
+| 4 · Elevated risk | 10% to 18% | The Early-Career Stretch | Additional assessment |
+| 5 · High risk | 18% and above | The Fragile Applicant | Refer or exclude under the selected cut-off |
 
-<!-- TODO: Notion plans four personas, but the app's master scale has five grades (<3%, 3-6%, 6-10%, 10-18%, 18%+). Settle on 4 or 5 so the README, app and deck match. -->
+<!-- TODO: confirm the assessment-path wording against your policy; it currently follows the results deck. -->
 
 The model **supports** lending decisions. It is not a standalone approve / decline engine: policy rules, affordability and credit judgement still apply.
 
 ## 8. Streamlit application
-<!-- Task 2.3.8 -->
 
 An interactive applicant PD tool: enter an applicant's details and see their estimated probability of payment difficulty, risk grade, and how they compare with the portfolio average.
 
@@ -117,37 +121,35 @@ An interactive applicant PD tool: enter an applicant's details and see their est
 **[Open the live app](TODO)** (free hosting; may take about 30 seconds to wake up)
 
 ## 9. How to navigate and run
-<!-- Task 2.3.9 -->
 
 **Just skimming?** Read this page, then the decks. The notebooks hold the full reasoning.
 
 **Running it locally:**
 
 ```bash
-git clone TODO
-cd TODO
+git clone https://github.com/smallchuch/pd_model_project.git
+cd pd_model_project
 pip install -r requirements.txt          # Python 3.12
 
 # Run the app
-streamlit run "Projects/Flagship PD Model Project/05_Applicant_PD_Dashboard/pd_app/app.py"
+cd 05_Applicant_PD_Dashboard
+streamlit run pd_app/app.py
 
-# Run the tests
+# Run the tests (from 05_Applicant_PD_Dashboard)
 python -m pytest tests -v
 ```
 
-Notebooks run top to bottom in order (01 → 05) once the Kaggle data is in place.
+**Rerunning the modelling:** put the Kaggle data in place (section 2), then run notebook 01, then 02, then 03. Run each notebook from its own folder. Notebook 01 creates the inputs that 02 and 03 read.
 
 ## 10. Key results and takeaways
-<!-- Task 2.3.10 -->
 
 - A transparent 12-feature scorecard reaches a **test Gini of 0.49** with almost no overfitting (train/test gap 0.003).
-- Risk grades separate cleanly: on in-policy test applicants, actual default rates rise from about **2% in the lowest grade to about 27% in the highest**, closely matching predicted PDs.
+- On 50,349 in-policy test applicants, actual default rates rise from **1.9% in Grade 1 to 26.8% in Grade 5**, close to the predicted 2.0% and 26.2%.
 - External credit scores dominate, but affordability ratios add signal that raw loan amounts did not.
-- <!-- TODO: challenger verdict in one line -->
+- A LightGBM challenger reaches a test Gini of 0.52, a gain of 0.03 over the scorecard. That is a borderline uplift, so the scorecard stays as champion.
 - <!-- TODO: the one business takeaway a credit manager should remember -->
 
 ## 11. Assumptions and limitations
-<!-- Task 2.3.11 -->
 
 - **Target is a proxy.** "Payment difficulty" uses undisclosed lender thresholds, so it does not map directly to 90+ days past due or a Basel default.
 - **Application data only.** Bureau and repayment history tables were not used; adding them would likely improve the model.
@@ -155,4 +157,4 @@ Notebooks run top to bottom in order (01 → 05) once the Kaggle data is in plac
 - **Single time period, random split.** No out-of-time validation is possible with this dataset, so stability over time is untested.
 - **Gender excluded**, but a full proxy check on the retained features has not yet been run.
 - **Anonymised organisation types** are grouped into a catch-all band, so that lookup in the app is approximate.
-- **Illustrative only.** Risk grades, thresholds and pathways are examples, not a production credit policy.
+- **Illustrative only.** Risk grades, thresholds and assessment paths are examples, not a production credit policy.

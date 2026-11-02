@@ -1,0 +1,15 @@
+# Draft. Pin everything by freezing the working venv before the Streamlit Community Cloud deploy.
+# Deploy target: Python 3.12. scikit-learn is pinned because the saved models depend on it.
+streamlit
+pandas
+numpy
+scipy
+statsmodels
+scikit-learn==1.8.0
+joblib
+matplotlib
+seaborn
+optbinning
+lightgbm
+pyarrow
+pytest

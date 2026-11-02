@@ -1,0 +1,144 @@
+{
+  "description": "Plain-language organisation options for the form. Members of each option share one ORG_BAND, so grouping loses no model information.",
+  "options": [
+    {
+      "label": "Banking and insurance",
+      "org_type_used": "Bank",
+      "org_band": "<6%",
+      "covers": [
+        "Bank",
+        "Insurance"
+      ]
+    },
+    {
+      "label": "Education (school or university)",
+      "org_type_used": "School",
+      "org_band": "<6%",
+      "covers": [
+        "School",
+        "University"
+      ]
+    },
+    {
+      "label": "Defence, police and security ministries",
+      "org_type_used": "Military",
+      "org_band": "<6%",
+      "covers": [
+        "Military",
+        "Police",
+        "Security Ministries"
+      ]
+    },
+    {
+      "label": "Religious and cultural organisations",
+      "org_type_used": "Religion",
+      "org_band": "<6%",
+      "covers": [
+        "Religion",
+        "Culture"
+      ]
+    },
+    {
+      "label": "Government and emergency services",
+      "org_type_used": "Government",
+      "org_band": "6-8%",
+      "covers": [
+        "Government",
+        "Emergency"
+      ]
+    },
+    {
+      "label": "Health and childcare",
+      "org_type_used": "Medicine",
+      "org_band": "6-8%",
+      "covers": [
+        "Medicine",
+        "Kindergarten"
+      ]
+    },
+    {
+      "label": "Utilities, housing, hotels and general services",
+      "org_type_used": "Electricity",
+      "org_band": "6-8%",
+      "covers": [
+        "Electricity",
+        "Housing",
+        "Hotel",
+        "Services"
+      ]
+    },
+    {
+      "label": "Telecom, postal, legal and advertising",
+      "org_type_used": "Telecom",
+      "org_band": "8-10%",
+      "covers": [
+        "Telecom",
+        "Mobile",
+        "Postal",
+        "Legal Services",
+        "Advertising"
+      ]
+    },
+    {
+      "label": "Cleaning and real estate",
+      "org_type_used": "Cleaning",
+      "org_band": ">10%",
+      "covers": [
+        "Cleaning",
+        "Realtor"
+      ]
+    },
+    {
+      "label": "Agriculture",
+      "org_type_used": "Agriculture",
+      "org_band": "Agriculture",
+      "covers": [
+        "Agriculture"
+      ]
+    },
+    {
+      "label": "Construction",
+      "org_type_used": "Construction",
+      "org_band": "Construction",
+      "covers": [
+        "Construction"
+      ]
+    },
+    {
+      "label": "Restaurants and food service",
+      "org_type_used": "Restaurant",
+      "org_band": "Restaurant",
+      "covers": [
+        "Restaurant"
+      ]
+    },
+    {
+      "label": "Security services",
+      "org_type_used": "Security",
+      "org_band": "Security",
+      "covers": [
+        "Security"
+      ]
+    },
+    {
+      "label": "Self-employed",
+      "org_type_used": "Self-employed",
+      "org_band": "Self-employed",
+      "covers": [
+        "Self-employed"
+      ]
+    },
+    {
+      "label": "Other business or industry (not listed)",
+      "org_type_used": null,
+      "org_band": "8-10%",
+      "covers": [
+        "any type not listed above, including the 27 anonymised types"
+      ],
+      "note": "Base band fallback from the driver scan"
+    }
+  ],
+  "not_offered": "The 27 anonymised types (Business Entity, Industry, Trade, Transport) have no plain-language name and fall under 'Other'.",
+  "scope_note": "Raw parquets hold ORG_BAND, not ORGANIZATION_TYPE, so this lookup is tested separately from the parity test.",
+  "out_of_policy_note": "Out-of-policy income types (employment_rules.json) never reach this lookup, so no special ORG_BAND rule is needed. Updated 2026-10-15 (written by AI)."
+}

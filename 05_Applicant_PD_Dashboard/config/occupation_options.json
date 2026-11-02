@@ -1,0 +1,27 @@
+{
+  "description": "Occupation options for the form: the 18 dataset values, unchanged. Agreed 2026-10-15. Written by AI.",
+  "field": "OCCUPATION_TYPE",
+  "required": true,
+  "blank_allowed": false,
+  "options": [
+    "Accountants",
+    "Cleaning staff",
+    "Cooking staff",
+    "Core staff",
+    "Drivers",
+    "HR staff",
+    "High skill tech staff",
+    "IT staff",
+    "Laborers",
+    "Low-skill Laborers",
+    "Managers",
+    "Medicine staff",
+    "Private service staff",
+    "Realty agents",
+    "Sales staff",
+    "Secretaries",
+    "Security staff",
+    "Waiters/barmen staff"
+  ],
+  "note": "No blank option. Blank (Missing bin, WOE +0.236) is dominated by pensioners, who are now out of policy; working-type applicants with blank occupation default at 8.0% but would score like bin 2."
+}

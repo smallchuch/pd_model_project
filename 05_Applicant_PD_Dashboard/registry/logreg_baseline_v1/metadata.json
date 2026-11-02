@@ -1,0 +1,23 @@
+{
+  "name": "logreg_baseline_v1",
+  "version": "1.0",
+  "role": "champion",
+  "features": [
+    "EXT_SOURCE_3",
+    "EXT_SOURCE_2",
+    "EXT_SOURCE_1",
+    "DAYS_EMPLOYED",
+    "ANNUITY_CREDIT",
+    "AMT_GOODS_PRICE",
+    "OCCUPATION_TYPE",
+    "CREDIT_GOODS",
+    "ORG_BAND",
+    "NAME_INCOME_TYPE",
+    "REGION_RATING_CLIENT_W_CITY",
+    "NAME_EDUCATION_TYPE"
+  ],
+  "gini_test": 0.49255691016876524,
+  "gini_train": 0.48978688022373884,
+  "ks_test": 0.3619886671190614,
+  "sklearn_version": "1.8.0"
+}

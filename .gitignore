@@ -1,0 +1,20 @@
+# Python / tooling caches
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+.DS_Store
+Thumbs.db
+
+# Editor backups and scratch
+*.bak
+_to_delete/
+
+# Upstream competition data: not redistributed. Regenerate locally (see README).
+train_raw.parquet
+test_raw.parquet
+application_train.csv
+application_test.csv
+Datasets/

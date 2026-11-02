@@ -1,0 +1,15 @@
+{
+  "known_limitations_to_disclose": [
+    "EXT_SOURCE values are anonymised Home Credit scores, not Equifax scores. Equifax bands are an approximate translation.",
+    "Amounts are in dataset currency units, not AUD. The assumed interest rate is illustrative.",
+    "AMT_GOODS_PRICE has a risk spike at exactly 450,000 (one loan product, about 20,800 training rows at 13.7% default).",
+    "ANNUITY_CREDIT has a risk spike for repayment-to-loan ratios of 0.0466 to 0.0497 (one loan product, 14.7% default). With the assumed rate, a 24-month term lands here.",
+    "The target is a payment-difficulty proxy, not a Basel 90+ DPD default. Output is an estimated probability of payment difficulty.",
+    "Pensioner, Unemployed, Businessman and Maternity leave applicants are out of policy and not scored. The model was trained including them (pensioners were 18% of rows at 5.4% default), so average PDs for the in-policy population may be slightly understated. Ranking is unaffected.",
+    "Trained on Home Credit applicants aged 20 to 69. Illustrative portfolio model, not a production lending model.",
+    "Fix for both spikes: monotonic binning constraint, planned for notebook 03.",
+    "Area rating uses the dataset's anonymised 1 to 3 region rating. A real lender would assign it from the postcode using an internal rating.",
+    "'Other business or industry (not listed)' uses the most common organisation band (8-10%). The anonymised industry, trade and transport types it covers actually range from under 6% to over 10% default, so their PDs are approximated.",
+    "The model uses three external credit scores; the form asks for one band and applies it to all three. Real applicants' three scores differ, so this shows how the model responds to a consistent credit profile."
+  ]
+}
