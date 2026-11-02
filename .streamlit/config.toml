@@ -1,0 +1,9 @@
+# Theme matching smallchuch.github.io (Jacaranda / Gold / Olive on warm off-white). Written by AI.
+# Streamlit reads this when you run `streamlit run pd_app/app.py` from this folder.
+[theme]
+base = "light"
+primaryColor = "#7A5C9E"
+backgroundColor = "#F7F5F0"
+secondaryBackgroundColor = "#FAF9F5"
+textColor = "#2F2F2F"
+font = "sans serif"
