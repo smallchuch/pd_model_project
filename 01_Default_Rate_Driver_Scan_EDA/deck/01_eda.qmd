@@ -153,34 +153,30 @@ plt.show()
 
 ## How to Read the Charts {data-kick="Method"}
 
-Applicants are sorted into bins from low to high value for each field. Each bin's repayment-difficulty rate is compared with the **8.07% portfolio rate**.
+Each bar is a group's repayment-difficulty rate, compared with the **`{python} f"{BASE:.2%}"` portfolio rate** (dashed line).
 
 ```{python}
-#| fig-width: 10
-#| fig-height: 3.8
-#| out-width: "85%"
-ex = df.assign(kids=df["CNT_CHILDREN"].clip(upper=3)).groupby("kids")["TARGET"].agg(["mean", "size"])
+#| fig-width: 11
+#| fig-height: 3.9
+ex = df.assign(kids=df["CNT_CHILDREN"].clip(upper=3)).groupby("kids")["TARGET"].mean()
 ex.index = ["0 children", "1 child", "2 children", "3 or more"]
-norm = _mc.Normalize(ex["mean"].min(), ex["mean"].max())
-rgba = BRAND_RAMP(norm(ex["mean"].values)); rgba[:, 3] = 0.95
-fig, ax = plt.subplots(figsize=(11, 4.0))
-bars = ax.bar(ex.index, ex["mean"], color=rgba, edgecolor="white", linewidth=1.0, width=0.55)
-ax.axhline(BASE, ls="--", color=C.text_muted, lw=1.2)
-ax.text(3.45, BASE, f" portfolio {BASE:.2%}", va="bottom", ha="right", fontsize=11,
+norm = _mc.Normalize(ex.min(), ex.max())
+rgba = BRAND_RAMP(norm(ex.values)); rgba[:, 3] = 0.95
+fig, ax = plt.subplots(figsize=(11, 3.9))
+bars = ax.bar(ex.index, ex.values, color=rgba, edgecolor="white", linewidth=1.0, width=0.55)
+ax.axhline(BASE, ls="--", color=C.text_muted, lw=1.4)
+ax.text(3.45, BASE, f" portfolio {BASE:.2%}", va="bottom", ha="right", fontsize=13,
         color=C.text_muted, fontfamily=f("mono"))
-ax.bar_label(bars, labels=[f"{v:.1%}" for v in ex["mean"]], padding=4, fontweight="bold",
-             fontfamily=f("mono"), fontsize=12, color=C.text)
+ax.bar_label(bars, labels=[f"{v:.1%}" for v in ex.values], padding=4, fontweight="bold",
+             fontfamily=f("mono"), fontsize=14, color=C.text)
 ax.yaxis.set_major_formatter(mticker.PercentFormatter(xmax=1))
-ax.set_ylim(0, ex["mean"].max() * 1.18)
-ax.set_title("Example: number of children (illustration)", loc="left")
+ax.set_ylim(0, ex.max() * 1.2)
+ax.tick_params(labelsize=14)
 ax.grid(axis="x", visible=False)
 plt.show()
 ```
 
-Lighter bars have lower repayment-difficulty rates and darker bars have higher rates. Colour scale: **Lower Repayment Difficulty → Higher Repayment Difficulty.**
-
-- **Clear separation:** default rates vary across groups.
-- **Little separation:** default rates stay close to the portfolio average.
+Lighter = lower repayment difficulty, darker = higher. **Bars that move away from the line show separation; bars close to it show little.**
 
 ## External Credit Scores {data-kick="Signal"}
 
@@ -191,9 +187,12 @@ Lighter bars have lower repayment-difficulty rates and darker bars have higher r
 fig, axes = default_rate_by_bin(
     df, ["EXT_SOURCE_2", "EXT_SOURCE_3", "EXT_SOURCE_1"],
     target="TARGET", ncols=3, bins=10, bin_label="rank",
-    grade_scale=BRAND_RAMP, na_as_bin=True, panel_w=3.3, panel_h=4.2,
+    grade_scale=BRAND_RAMP, na_as_bin=True, panel_w=3.7, panel_h=3.3,
     show_base_rate=False,
 )
+strip_bar_labels(axes)
+for ax in np.ravel(np.asarray(axes)):
+    ax.yaxis.set_major_formatter(mticker.PercentFormatter(xmax=1))
 add_baseline(axes, BASE)
 plt.show()
 ```
@@ -206,12 +205,14 @@ plt.show()
 #| fig-width: 10
 #| fig-height: 4.6
 #| out-width: "100%"
+small_labels(9)
 fig, axes = default_rate_by_bin(
     df, ["AGE_YEARS", "EMP_YEARS"], target="TARGET",
     ncols=2, bins=8, method="quantile", bin_label="range",
-    grade_scale=BRAND_RAMP, na_as_bin=True, panel_w=6.4, panel_h=4.8,
+    grade_scale=BRAND_RAMP, na_as_bin=True, panel_w=5.5, panel_h=3.4,
     show_base_rate=False,
 )
+reset_labels()
 add_baseline(axes, BASE)
 plt.show()
 ```
@@ -256,13 +257,14 @@ print(f"Default rates rise as education level falls, from **{order.iloc[0]:.1%}*
 #| fig-width: 10
 #| fig-height: 4.6
 #| out-width: "100%"
-small_labels(9)
 fig, axes = default_rate_by_bin(
     df, ["AMT_CREDIT", "AMT_INCOME_TOTAL", "AMT_ANNUITY"],
     target="TARGET", ncols=3, bins=10, bin_label="rank",
-    grade_scale=BRAND_RAMP, panel_w=3.3, panel_h=4.2, show_base_rate=False,
+    grade_scale=BRAND_RAMP, panel_w=3.7, panel_h=3.3, show_base_rate=False,
 )
-reset_labels()
+strip_bar_labels(axes)
+for ax in np.ravel(np.asarray(axes)):
+    ax.yaxis.set_major_formatter(mticker.PercentFormatter(xmax=1))
 add_baseline(axes, BASE)
 plt.show()
 ```
@@ -280,7 +282,7 @@ plt.show()
 fig, axes = default_rate_by_bin(
     df, ["EMPLOYED_AGE", "CREDIT_GOODS", "DTI"], target="TARGET",
     ncols=3, bins=12, bin_label="rank", grade_scale=BRAND_RAMP, na_as_bin=True,
-    panel_w=3.3, panel_h=4.2, show_base_rate=False,
+    panel_w=3.7, panel_h=3.3, show_base_rate=False,
 )
 strip_bar_labels(axes)   # 12 near-equal bins: labels collide, so the y-axis carries values
 for ax in np.ravel(np.asarray(axes)):
@@ -289,7 +291,7 @@ add_baseline(axes, BASE)
 plt.show()
 ```
 
-**The Employed-to-Age and Credit-to-Goods (LVR) ratios show separation across groups. Debt-to-income does not show a clear pattern.**
+**Employed-to-Age and LVR separate risk across groups. Debt-to-Income shows no clear pattern.**
 
 ## WOE and Information Value {data-kick="Feature selection"}
 
