@@ -22,8 +22,8 @@
       "story": "Typical stable applicant: average credit, nine years in the same job.",
       "form": {
         "age": 41, "income_type": "Working", "occupation": "Core staff",
-        "org_option": "Health and childcare", "education": "Year 12",
-        "employment_years": 9.0, "area_rating": 2,
+        "org_option": "Health and childcare", "education": "Bachelor degree",
+        "employment_years": 9.0, "area_rating": 1,
         "ext_1_band": "Average", "ext_2_band": "Average", "ext_3_band": "Average",
         "loan_amount": 500000, "term_months": 36, "goods_price": 550000
       }
@@ -35,7 +35,7 @@
       "story": "Mid-career with no stand-out strengths and a small deposit.",
       "form": {
         "age": 33, "income_type": "Working", "occupation": "Sales staff",
-        "org_option": "Other business or industry (not listed)", "education": "Year 12",
+        "org_option": "Other business or industry (not listed)", "education": "Bachelor degree",
         "employment_years": 4.0, "area_rating": 2,
         "ext_1_band": "Average", "ext_2_band": "Average", "ext_3_band": "Average",
         "loan_amount": 500000, "term_months": 36, "goods_price": 520000

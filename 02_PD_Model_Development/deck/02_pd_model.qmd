@@ -39,18 +39,19 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score
 from scipy.stats import ks_2samp
 
-def find_repo_root(start, marker="lib"):
+def find_repo_root(start, name="CreditRiskLearning"):
     p_ = os.path.abspath(start)
     while True:
-        if os.path.isdir(os.path.join(p_, marker)):
+        if os.path.basename(p_) == name:
             return p_
         parent = os.path.dirname(p_)
         if parent == p_:
-            raise FileNotFoundError("No lib folder found above " + str(start))
+            raise FileNotFoundError(name)
         p_ = parent
 
 REPO = find_repo_root(os.getcwd())
-sys.path.append(os.path.join(REPO, "lib"))
+sys.path.append(os.path.join(REPO, "Core Resources"))
+sys.path.append(os.path.join(REPO, "Core Resources", "Scripts"))
 from python_style_util import p, f, s, C
 from deck_utils import deck_style
 deck_style()
@@ -71,7 +72,7 @@ def grid(items, cols):
 def pretty(name):
     return DISPLAY.get(name, name.replace("_", " ").title())
 
-PROJ = REPO
+PROJ = os.path.join(REPO, "Projects", "Flagship PD Model Project")
 INPUT = os.path.join(PROJ, "02_PD_Model_Development", "inputs")
 REG = os.path.join(PROJ, "05_Applicant_PD_Dashboard", "registry", "logreg_baseline_v1")
 
@@ -197,10 +198,15 @@ ax.grid(axis="x", visible=False)
 ```{python}
 #| output: asis
 tbl = coef.reindex(coef.abs().sort_values(ascending=False).index)
-print("| Feature | Coefficient |")
-print("|---|---:|")
-for k, v in tbl.items():
-    print(f"| {DISPLAY.get(k, k)} | {v:+.3f} |")
+def half(items):
+    rows = "".join(f"<tr style='border-bottom:1px solid #E6E0EC'><td style='padding:7px 10px'>{DISPLAY.get(k, k)}</td>"
+                   f"<td style='padding:7px 10px;text-align:right;font-family:monospace'>{v:+.3f}</td></tr>" for k, v in items)
+    return ("<table style='font-size:18px;width:100%;border-collapse:collapse'><thead><tr style='border-bottom:2px solid #3D2E4F'>"
+            "<th style='text-align:left;padding:6px 10px'>Feature</th><th style='text-align:right;padding:6px 10px'>Coefficient</th>"
+            "</tr></thead><tbody>" + rows + "</tbody></table>")
+items = list(tbl.items())
+print("<div style='display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:8px'>"
+      + half(items[:6]) + half(items[6:]) + "</div>")
 ```
 
 **`{python} "External credit scores have the largest coefficients in the baseline model." if ext_top else "Coefficient ranking to be reviewed."`**
