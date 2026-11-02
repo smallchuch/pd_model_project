@@ -4,10 +4,6 @@
 
 An end-to-end credit risk project: from raw application data to a deployed tool that estimates an applicant's probability of payment difficulty, assigns a risk grade, and shows the assessment path for that grade.
 
-**[Live app](TODO) · [Portfolio page](TODO) · [EDA deck](01_Default_Rate_Driver_Scan_EDA/deck/01_eda.html) · [Baseline deck](02_PD_Model_Development/deck/02_pd_model.html) · [Challenger deck](03_Challenger_Model_LightGBM/deck/03_challenger.html) · [Results deck](04_Final_Results_and_Reccomendations/deck/pd_recommendations.html)**
-
----
-
 ## 1. Purpose and business problem
 
 Lenders need a consistent way to rank applicants by credit risk at the point of application, so effort goes where it matters: faster decisions for low-risk applicants, closer review for high-risk ones.
