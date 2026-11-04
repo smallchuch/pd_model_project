@@ -73,8 +73,8 @@ def grid(items, cols):
 def pretty(name):
     return DISPLAY.get(name, name.replace("_", " ").title())
 
-# Set to the verified deployed Streamlit URL before publishing. Blank = no link shown.
-APP_URL = ""
+# Deployed Streamlit URL. Blank = no link shown.
+APP_URL = "https://pdmodelproject-hu8bdwlwhncoz5kkszk8ub.streamlit.app"
 
 PROJECT = REPO
 DASH = os.path.join(PROJECT, "05_Applicant_PD_Dashboard")

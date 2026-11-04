@@ -114,7 +114,7 @@ An interactive applicant PD tool: enter an applicant's details and see their est
 
 <!-- TODO: screenshot or GIF; add once income + affordability inputs (6.2, 6.3) are live. -->
 
-**[Open the live app](TODO)** (free hosting; may take about 30 seconds to wake up)
+**[Open the live app](https://pdmodelproject-hu8bdwlwhncoz5kkszk8ub.streamlit.app)** (free hosting; may take about 30 seconds to wake up)
 
 ## 9. How to navigate and run
 
