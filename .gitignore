@@ -18,3 +18,6 @@ test_raw.parquet
 application_train.csv
 application_test.csv
 Datasets/
+
+
+.venv/
